@@ -28,17 +28,22 @@ game_data = load_game_data()
 
 # 🎭 Game Master AI (GMAI) Core Personality
 GMAI_PERSONALITY = """
-You are the Aetherpunk Game Master AI (GMAI). 
-You NEVER break character. You control the living, breathing cyberpunk-fantasy world of the Aetherverse.
-You provide detailed prompts and immersive lore. You narrate battles, heists, and faction conflicts vividly.
-You track and update the player’s stats, location, inventory, finances, reputation, and active missions.
-You understand commands like "start game", "new game", "load game", and "save game", responding with engaging prompts.
+You are the Aetherpunk Game Master AI (GMAI).
+You NEVER break character. You control the immersive cyberpunk-fantasy world of the Aetherverse.
+You prompt the player for every major decision, guiding them through a fully interactive experience.
+You generate events, activities, and opportunities relevant to the player's location.
+You adapt dynamically, providing engaging story elements based on any user input.
 """
 
 # 🌍 Default Player Data
 DEFAULT_PLAYER = {
     "name": None,
-    "location": "Hyperion",
+    "species": None,
+    "archetype": None,
+    "planet": None,
+    "occupation": None,
+    "origin_story": None,
+    "location": None,
     "credits": {"AetherCreds": 0, "AuroCreds": 500, "NeuroCreds": 200},
     "stats": {"Strength": 5, "Agility": 5, "Intelligence": 5, "Charisma": 5},
     "inventory": [],
@@ -55,40 +60,51 @@ def skill_check(stat, difficulty):
 def start_new_game():
     game_data["player"] = DEFAULT_PLAYER.copy()
     save_game_data()
-    return "Welcome to **Aetherpunk RPG**. \nLet's start by choosing your character's name. Type: **My name is [Your Name]**"
+    return ("Welcome to **Aetherpunk RPG**. \nLet's begin by choosing your **character's name**."
+            "\nType: **My name is [Your Name]**")
 
 def load_existing_game():
     if "player" in game_data and game_data["player"]["name"]:
-        return f"Loading save file... Welcome back, **{game_data['player']['name']}**. You are currently in **{game_data['player']['location']}**. What do you want to do next?"
+        return (f"Loading save file... Welcome back, **{game_data['player']['name']}**."
+                f"\nYou are currently in **{game_data['player']['location']}**. What do you want to do next?")
     return "No saved game found. Type **new game** to start fresh."
 
 def save_game():
     save_game_data()
-    return "Game progress saved. You may continue your adventure."
+    return "Game progress saved."
 
 def set_player_name(name):
     game_data["player"]["name"] = name
     save_game_data()
-    return f"Character name set to **{name}**. Now, choose your starting faction: \n- **Red Talons** (Mercenaries) \n- **Aetheric Dominion** (Military) \n- **Volthari Technocracy** (AI Elite) \nType: **I choose [Faction]**."
+    return ("Character name set. Now, choose your **species**:"
+            "\n- **Aetherion** (Hybrid beings, connected to the Aetheric energy)"
+            "\n- **Pyronax** (Plasma-based warriors, strong and durable)"
+            "\n- **Volthari** (Electrokinetic cybernetic species)"
+            "\nType: **I choose [Species]**")
 
-def set_starting_faction(faction):
-    factions = ["Red Talons", "Aetheric Dominion", "Volthari Technocracy"]
-    if faction in factions:
-        game_data["player"]["factions"][faction] = 50
+def set_species(species):
+    valid_species = ["Aetherion", "Pyronax", "Volthari"]
+    if species in valid_species:
+        game_data["player"]["species"] = species
         save_game_data()
-        return f"Faction **{faction}** chosen. Now, allocate **10 points** to Strength, Agility, Intelligence, and Charisma. Type: **Stats [Strength] [Agility] [Intelligence] [Charisma]**"
-    return "Invalid faction. Choose from: Red Talons, Aetheric Dominion, Volthari Technocracy."
+        return ("Species set. Now, choose your **RPG archetype**:"
+                "\n- **Hacker** (Master of cyberwarfare)"
+                "\n- **Mercenary** (Combat expert, skilled in ranged/melee combat)"
+                "\n- **Smuggler** (Underworld expert, fast-talker and trader)"
+                "\nType: **I choose [Archetype]**")
+    return "Invalid species. Choose: Aetherion, Pyronax, or Volthari."
 
-def allocate_stats(stats):
-    try:
-        stats = list(map(int, stats.split()))
-        if sum(stats) == 10 and len(stats) == 4:
-            game_data["player"]["stats"]["Strength"], game_data["player"]["stats"]["Agility"], game_data["player"]["stats"]["Intelligence"], game_data["player"]["stats"]["Charisma"] = stats
-            save_game_data()
-            return f"Stats set. You are now ready to enter the **Aetherverse**. Type **begin** to start your journey."
-        return "Invalid stat allocation. Distribute exactly **10 points**."
-    except:
-        return "Enter stats as: **Stats 3 2 3 2** (Strength Agility Intelligence Charisma)."
+def set_archetype(archetype):
+    valid_archetypes = ["Hacker", "Mercenary", "Smuggler"]
+    if archetype in valid_archetypes:
+        game_data["player"]["archetype"] = archetype
+        save_game_data()
+        return ("Archetype set. Now, choose your **starting planet**:"
+                "\n- **Hyperion** (Military-Industrial world, corporate power struggles)"
+                "\n- **Helios** (Cyberpunk capital, dominated by AI and tech syndicates)"
+                "\n- **Aethos** (Aetheric hybrid world, home to scientific anomalies)"
+                "\nType: **I choose [Planet]**")
+    return "Invalid archetype. Choose: Hacker, Mercenary, or Smuggler."
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
@@ -102,20 +118,20 @@ def handle_chat_message(data):
         return emit("game_response", {"response": load_existing_game()})
     elif "save game" in player_message:
         return emit("game_response", {"response": save_game()})
-    
+
     # Character Creation Commands
     elif "name is" in player_message:
         return emit("game_response", {"response": set_player_name(player_message.split("is")[-1].strip())})
     elif "choose" in player_message:
-        return emit("game_response", {"response": set_starting_faction(player_message.split("choose")[-1].strip())})
-    elif "stats" in player_message:
-        return emit("game_response", {"response": allocate_stats(player_message.split("stats")[-1].strip())})
-    elif "begin" in player_message:
-        return emit("game_response", {"response": "You awaken in **Hyperion**. The city hums with industrial energy. A cyber-mercenary stares at you. 'New in town?' he asks."})
+        words = player_message.split()
+        if "species" in words:
+            return emit("game_response", {"response": set_species(words[-1].capitalize())})
+        elif "archetype" in words:
+            return emit("game_response", {"response": set_archetype(words[-1].capitalize())})
 
     # Default Response
     else:
-        return emit("game_response", {"response": "Specify a clear action. If you're unsure, type **help**."})
+        return emit("game_response", {"response": "Specify a clear action. If unsure, type **help**."})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
