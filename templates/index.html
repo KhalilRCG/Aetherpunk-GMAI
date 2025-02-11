@@ -9,28 +9,32 @@
             color: #00FF00;
             font-family: "Courier New", monospace;
             text-align: center;
-            padding: 50px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            height: 100vh;
+            margin: 0;
         }
         h1 {
-            font-size: 36px;
+            font-size: 48px;
             margin-bottom: 20px;
         }
         input, button {
-            font-size: 24px;
-            padding: 12px;
-            margin: 15px;
+            font-size: 28px;
+            padding: 15px;
+            margin: 20px;
             background-color: black;
             color: #00FF00;
             border: 2px solid #00FF00;
             text-align: center;
         }
         input {
-            width: 50%;
+            width: 60%;
         }
         #response {
-            font-size: 24px;
-            line-height: 1.8;
-            max-width: 70%;
+            font-size: 32px;
+            line-height: 2.0;
+            max-width: 80%;
             margin: 30px auto;
             text-align: center;
         }
@@ -43,11 +47,11 @@
     <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
 
     <script>
-        var socket = io("https://aetherpunk-gmai.onrender.com");
+        var socket = io("https://aetherpunk-gmai.onrender.com", { reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 3000 });
 
         function sendAction() { 
-            var action = document.getElementById("playerInput").value;
-            if (action.trim() !== "") {
+            var action = document.getElementById("playerInput").value.trim();
+            if (action !== "") {
                 socket.emit("chat_message", { message: action });
                 document.getElementById("playerInput").value = ""; 
             }
@@ -65,4 +69,3 @@
     </script>
 </body>
 </html>
-
