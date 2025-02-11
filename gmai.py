@@ -49,6 +49,7 @@ def skill_check(stat, difficulty):
 
 # 📍 Character Creation & Game Setup
 def start_new_game():
+    global game_data  # Ensure we reset game data correctly
     game_data["player"] = DEFAULT_PLAYER.copy()
     save_game_data()
     return ("🌌 Welcome to **Aetherpunk RPG**.\n\nLet's begin by choosing your **character's name**."
@@ -73,28 +74,6 @@ def set_player_name(name):
             "\n- **Volthari** (Electrokinetic cybernetic species)"
             "\nType your species choice.")
 
-def set_species(species):
-    species = species.lower()
-    valid_species = {"aetherion": "Aetherion", "pyronax": "Pyronax", "volthari": "Volthari"}
-    if species in valid_species:
-        game_data["player"]["species"] = valid_species[species]
-        save_game_data()
-        return ("✅ Species set. Now, choose your **RPG archetype**:"
-                "\n- **Hacker (Hack)** (Master of cyberwarfare)"
-                "\n- **Mercenary (Merc)** (Combat expert, skilled in ranged/melee combat)"
-                "\n- **Smuggler (Smug)** (Underworld expert, fast-talker and trader)"
-                "\nType your archetype choice.")
-    return "⚠️ Invalid species. Choose: Aetherion, Pyronax, or Volthari."
-
-def set_archetype(archetype):
-    archetype = archetype.lower()
-    valid_archetypes = {"hacker": "Hacker", "hack": "Hacker", "mercenary": "Mercenary", "merc": "Mercenary", "smuggler": "Smuggler", "smug": "Smuggler"}
-    if archetype in valid_archetypes:
-        game_data["player"]["archetype"] = valid_archetypes[archetype]
-        save_game_data()
-        return "✅ Archetype set. You are ready to enter the Aetherverse. Type **begin** to start."
-    return "⚠️ Invalid archetype. Choose: Hacker, Mercenary, or Smuggler."
-
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
 def handle_chat_message(data):
@@ -102,24 +81,23 @@ def handle_chat_message(data):
 
     # Game Start Commands
     if "new game" in player_message or "start game" in player_message:
-        return emit("game_response", {"response": start_new_game()})
+        emit("game_response", {"response": "🔄 Resetting game... please wait."}, broadcast=True)
+        eventlet.sleep(1)  # Short delay to let the UI update
+        return emit("game_response", {"response": start_new_game()}, broadcast=True)
+    
     elif "load game" in player_message:
         return emit("game_response", {"response": load_existing_game()})
+    
     elif "save game" in player_message:
         return emit("game_response", {"response": save_game()})
 
-    # Character Creation Commands
     elif player_message.startswith("my name is"):
         name = player_message.replace("my name is", "").strip().title()
         return emit("game_response", {"response": set_player_name(name)})
-    elif player_message in ["aetherion", "pyronax", "volthari"]:
-        return emit("game_response", {"response": set_species(player_message)})
-    elif player_message in ["hack", "hacker", "merc", "mercenary", "smug", "smuggler"]:
-        return emit("game_response", {"response": set_archetype(player_message)})
 
-    # Default Response (Always Meaningful)
+    # Default Response
     else:
-        return emit("game_response", {"response": "🌀 Interesting input... let's turn it into something meaningful! What do you want to do next?"})
+        return emit("game_response", {"response": "🌀 I didn't quite get that, but let's keep moving forward! What do you want to do next?"})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
