@@ -1,19 +1,20 @@
-import sqlite3
 import random
+import eventlet
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 
 # Initialize Flask & WebSocket
 app = Flask(__name__)
-socketio = SocketIO(app)
+socketio = SocketIO(app, async_mode="eventlet")
 
-# Initialize Database
+# Database Connection Function (Corrected SQLite Handling)
 def get_db_connection():
+    import sqlite3  # Ensures sqlite3 only loads when needed
     conn = sqlite3.connect("aetherpunk.db")
     conn.row_factory = sqlite3.Row
     return conn
 
-# 🎭 Game Master AI Role - NEVER Breaks Character
+# 🎭 Game Master AI Personality - NEVER Breaks Character
 GMAI_PERSONALITY = """
 You are the Aetherpunk Game Master AI. 
 You NEVER break character. You control a living, breathing cyberpunk world filled with AI-driven faction wars, cybernetic augmentations, crime syndicates, and interstellar empires.
@@ -65,7 +66,8 @@ def update_player_progress(data):
     sp_gain = data.get("sp_gain", 1)
 
     conn = get_db_connection()
-    conn.execute("UPDATE players SET exp = exp + ?, ap = ap + ?, sp = sp + ? WHERE name = ?", (exp_gain, ap_gain, sp_gain, player_name))
+    conn.execute("UPDATE players SET exp = exp + ?, ap = ap + ?, sp = sp + ? WHERE name = ?", 
+                 (exp_gain, ap_gain, sp_gain, player_name))
     conn.commit()
     conn.close()
 
@@ -113,4 +115,5 @@ def index():
 
 # 🚀 Run the WebSocket Server
 if __name__ == "__main__":
-    socketio.run(app, debug=True)
+    socketio.run(app, debug=True, host="0.0.0.0", port=10000)
+
