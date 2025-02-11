@@ -1,45 +1,28 @@
-<<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Aetherpunk Game Master AI</title>
+    <title>Aetherpunk GM AI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body {
-            background-color: black;
-            color: #00FF00;
-            font-family: "Courier New", monospace;
-            text-align: center;
-            padding: 20px;
-        }
-        input, button {
-            font-size: 16px;
-            padding: 10px;
-            margin: 10px;
-            background-color: black;
-            color: #00FF00;
-            border: 1px solid #00FF00;
-        }
+        body { background-color: black; color: #00FF00; font-family: "Courier New", monospace; text-align: center; padding: 20px; }
+        input, button { font-size: 16px; padding: 10px; background-color: black; color: #00FF00; border: 1px solid #00FF00; }
     </style>
 </head>
 <body>
-    <h1>Aetherpunk RPG - AI Game Master</h1>
+    <h1>Aetherpunk RPG</h1>
     <input id="playerInput" type="text" placeholder="Enter your action..." />
     <button onclick="sendAction()">Submit</button>
-    <div id="response">The Game Master is waiting for your command...</div>
+    <div id="response"></div>
 
     <script>
         var socket = io("https://aetherpunk-gmai.onrender.com");
-
-        function sendAction() {
+        function sendAction() { 
             var action = document.getElementById("playerInput").value;
-            document.getElementById("response").innerText = "Processing...";
             socket.emit("chat_message", { message: action });
         }
-
         socket.on("game_response", function(data) {
             document.getElementById("response").innerText = data.response;
         });
     </script>
 </body>
 </html>
-
