@@ -1,27 +1,68 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Aetherpunk GM AI</title>
+    <title>Aetherpunk RPG - Game Master AI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { background-color: black; color: #00FF00; font-family: "Courier New", monospace; text-align: center; padding: 30px; }
-        input, button { font-size: 18px; padding: 12px; margin: 15px; background-color: black; color: #00FF00; border: 2px solid #00FF00; }
-        #response { font-size: 20px; line-height: 1.8; max-width: 80%; margin: auto; }
+        body {
+            background-color: black;
+            color: #00FF00;
+            font-family: "Courier New", monospace;
+            text-align: center;
+            padding: 50px;
+        }
+        h1 {
+            font-size: 36px;
+            margin-bottom: 20px;
+        }
+        input, button {
+            font-size: 24px;
+            padding: 12px;
+            margin: 15px;
+            background-color: black;
+            color: #00FF00;
+            border: 2px solid #00FF00;
+            text-align: center;
+        }
+        input {
+            width: 50%;
+        }
+        #response {
+            font-size: 24px;
+            line-height: 1.8;
+            max-width: 70%;
+            margin: 30px auto;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
     <h1>Aetherpunk RPG - Game Master AI</h1>
-    <input id="playerInput" type="text" placeholder="Enter your action..." />
+    <input id="playerInput" type="text" placeholder="Enter your action..." onkeypress="handleKeyPress(event)"/>
     <button onclick="sendAction()">Submit</button>
-    <div id="response">Welcome. Type **new game** to begin.</div>
+    <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
 
     <script>
         var socket = io("https://aetherpunk-gmai.onrender.com");
+
         function sendAction() { 
             var action = document.getElementById("playerInput").value;
-            socket.emit("chat_message", { message: action });
-            document.getElementById("playerInput").value = ""; 
+            if (action.trim() !== "") {
+                socket.emit("chat_message", { message: action });
+                document.getElementById("playerInput").value = ""; 
+            }
         }
+
+        function handleKeyPress(event) {
+            if (event.key === "Enter") {
+                sendAction();
+            }
+        }
+
+        socket.on("game_response", function(data) {
+            document.getElementById("response").innerText = data.response;
+        });
     </script>
 </body>
 </html>
+
