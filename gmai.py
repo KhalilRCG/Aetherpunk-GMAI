@@ -90,21 +90,27 @@ def generate_lore(subject):
 def generate_dynamic_story(player_message):
     """Generates AI responses while remembering extended game history."""
     try:
-        if player_message.startswith("travel"):
-            return travel_to(player_message.split(" ", 1)[1])
-
-        if player_message.startswith("lore"):
-            return generate_lore(player_message.split(" ", 1)[1])
-
-        game_data["player"]["history"] = game_data["player"]["history"][-30:]  # Memory expanded to 30 interactions
+        game_data["player"]["history"] = game_data["player"]["history"][-30:]  # Keeps memory to 30 interactions
 
         prompt = f"{game_data['player']['history']}\nPlayer: {player_message}\nGM:"
+
         response = openai.ChatCompletion.create(
-    model="gpt-4o",
-    messages=[{"role": "system", "content": "You are the Aetherpunk Game Master, guiding the player through an interactive RPG adventure."},
-              {"role": "user", "content": prompt}],
-    max_tokens=300
-)
+            model="gpt-4o",
+            messages=[
+                {"role": "system", "content": "You are the Aetherpunk Game Master, guiding the player through an interactive RPG adventure."},
+                {"role": "user", "content": prompt}
+            ],
+            max_tokens=300
+        ).get("choices", [{}])[0].get("message", {}).get("content", "").strip()
+
+        game_data["player"]["history"].append(f"Player: {player_message}")
+        game_data["player"]["history"].append(f"GM: {response}")
+        save_data()
+
+        return response
+    except Exception:
+        return "⚠️ Error processing request. Try again later."
+
 
 
         game_data["player"]["history"].append(f"Player: {player_message}")
