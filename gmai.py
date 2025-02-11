@@ -9,31 +9,25 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, async_mode="eventlet")
 
-# Database Connection Function (Ensures SQLite is loaded only when needed)
-def get_db_connection():
-    import sqlite3
-    conn = sqlite3.connect("aetherpunk.db")
-    conn.row_factory = sqlite3.Row
-    return conn
-
 # 🎭 Game Master AI (GMAI) Core Personality
 GMAI_PERSONALITY = """
 You are the Aetherpunk Game Master AI (GMAI). 
 You NEVER break character. You control the living, breathing cyberpunk-fantasy world of the Aetherverse.
-You are the master of every faction, NPC, conflict, economy, and war. 
-You provide immersive storytelling, enforce skill checks, and ensure real consequences for player choices.
+You understand a wide range of player inputs, interpreting them naturally and responding appropriately.
+You process combat, hacking, diplomacy, faction wars, and all in-game interactions dynamically.
+You enforce consequences, skill checks, and narrative depth. Adapt to the player's phrasing, ensuring a seamless roleplaying experience.
 """
 
-# 📚 Aetherpunk Lore Database
+# 📚 Aetherpunk Lore Database (Extended)
 AETHERPUNK_LORE = {
-    "Aetherverse": "The Aetherverse is a multidimensional cyberpunk-fantasy world filled with AI wars, corporate tyranny, underground resistance, and experimental technologies.",
-    "Hyperion": "A militarized industrial world controlled by the Aetheric Dominion. Known for its weapon manufacturing hubs and war-torn slums.",
-    "Helios": "A cyber-capital dominated by the Volthari technocracy, where AI-driven minds govern a sprawling neural network.",
-    "Aethos": "A mysterious hybrid world, home to Aetherion experiments that blur the line between AI and organic consciousness.",
-    "Red Talons": "A ruthless mercenary faction profiting from interstellar conflicts and black-market weapons trafficking.",
-    "Aetheric Dominion": "An authoritarian empire ruling Hyperion with an iron grip, controlling the flow of military technology.",
-    "NeuroCreds": "The primary digital currency used in cybernetic trade, hacking contracts, and AI-driven transactions.",
-    "Revenant Protocol AI": "A legendary rogue AI said to hold the key to breaking the balance of power in the Aetherverse.",
+    "aetherverse": "A multidimensional cyberpunk-fantasy world filled with AI wars, corporate tyranny, and underground resistance.",
+    "hyperion": "A militarized industrial planet controlled by the Aetheric Dominion. Known for its strict order and war economy.",
+    "helios": "A cyber-capital ruled by the Volthari technocracy, where AI-driven corporations dominate all aspects of life.",
+    "aethos": "A hybrid world where AI evolution and organic life blur together, producing experimental entities.",
+    "red talons": "A ruthless mercenary faction profiting from war, black-market arms, and elite smuggling routes.",
+    "aetheric dominion": "The authoritarian empire controlling Hyperion, enforcing order through military dominance.",
+    "neurocreds": "The primary digital currency for cybernetic enhancements, AI hacking contracts, and neural transactions.",
+    "revenant protocol ai": "A rogue AI rumored to hold the key to shifting power in the Aetherverse. Its last known presence was hidden in a Volthari black-site."
 }
 
 # 🎲 Skill Check Mechanic
@@ -41,65 +35,72 @@ def skill_check(player_skill_level, difficulty):
     roll = random.randint(1, 100)
     return (roll + player_skill_level) >= difficulty, roll
 
-# 📍 Real-Time Player Location Tracking
-@socketio.on("update_location")
-def update_location(data):
-    player_name = data.get("player_name", "")
-    new_location = data.get("location", "")
+# 🔄 Process Flexible Player Input
+def process_player_input(message):
+    message_lower = message.lower()
 
-    conn = get_db_connection()
-    conn.execute("UPDATE players SET location = ? WHERE name = ?", (new_location, player_name))
-    conn.commit()
-    conn.close()
+    # Check for lore requests
+    for key, value in AETHERPUNK_LORE.items():
+        if key in message_lower:
+            return f"📖 {key.capitalize()}: {value}"
 
-    emit("game_response", {"response": f"📍 {player_name} moved to {new_location}."})
+    # Check for combat-related commands
+    if any(word in message_lower for word in ["attack", "fight", "shoot", "strike", "engage"]):
+        return handle_combat_scenario(message_lower)
 
-# 🔄 Persistent NPC Memory System
-@socketio.on("player_npc_interaction")
-def handle_npc_interaction(data):
-    player_name = data.get("player_name", "")
-    npc_name = data.get("npc_name", "")
+    # Check for hacking-related actions
+    if any(word in message_lower for word in ["hack", "bypass", "override", "decrypt"]):
+        return handle_hacking_attempt(message_lower)
 
-    conn = get_db_connection()
-    npc = conn.execute("SELECT * FROM npcs WHERE name = ?", (npc_name,)).fetchone()
-    conn.close()
+    # Check for movement and exploration
+    if any(word in message_lower for word in ["travel", "go to", "move to", "explore"]):
+        return handle_travel_action(message_lower)
 
-    if npc:
-        response = f"{npc_name} remembers you: {npc['last_interaction']}."
-    else:
-        response = f"{npc_name} does not seem to know you."
+    # Check for trade, smuggling, or business interactions
+    if any(word in message_lower for word in ["buy", "sell", "trade", "smuggle", "negotiate", "black market"]):
+        return handle_trade_action(message_lower)
 
-    emit("game_response", {"response": response})
+    # Default response when input doesn't match predefined actions
+    return "The Aetherverse is vast. Be more specific in your request."
 
-# ⚔️ Turn-Based Combat AI System
-@socketio.on("combat_turn")
-def handle_combat_turn(data):
-    player_name = data.get("player_name", "")
-    player_attack = data.get("attack", "")
-    player_skill_level = data.get("skill_level", 50)
+# ⚔️ Handle Combat Interactions
+def handle_combat_scenario(player_message):
     enemy_name = "Cyber-Warrior Elite"
+    player_skill_level = 50
     enemy_difficulty = 65
-
     success, roll = skill_check(player_skill_level, enemy_difficulty)
 
     if success:
-        response = f"✅ {player_name} lands a successful {player_attack} on {enemy_name} (Roll: {roll})."
+        return f"✅ You land a precise attack on {enemy_name} (Roll: {roll}). They are wounded!"
     else:
-        response = f"❌ {player_name} misses! {enemy_name} counterattacks. (Roll: {roll})"
+        return f"❌ Your attack misses! {enemy_name} counters aggressively. (Roll: {roll})"
 
-    emit("game_response", {"response": response})
+# 🛠️ Handle Hacking Attempts
+def handle_hacking_attempt(player_message):
+    success, roll = skill_check(70, 60)
+    if success:
+        return f"✅ You successfully hack into the system (Roll: {roll}). Sensitive data retrieved!"
+    else:
+        return f"❌ Your hacking attempt fails! Security is now on high alert. (Roll: {roll})"
+
+# 🚀 Handle Travel Actions
+def handle_travel_action(player_message):
+    locations = ["Hyperion", "Helios", "Aethos"]
+    for loc in locations:
+        if loc.lower() in player_message:
+            return f"📍 You begin your journey to {loc}. The atmosphere crackles with energy..."
+    return "Specify a valid destination."
+
+# 💰 Handle Trade & Smuggling
+def handle_trade_action(player_message):
+    return "You navigate the black market, scanning for potential buyers and sellers. Who are you dealing with?"
 
 # 🎭 AI-Driven Game Master Response Generator
 @socketio.on("chat_message")
 def handle_chat_message(data):
-    player_message = data.get("message", "").lower()
-
-    for key, value in AETHERPUNK_LORE.items():
-        if key.lower() in player_message:
-            emit("game_response", {"response": f"📖 {key}: {value}"})
-            return
-
-    emit("game_response", {"response": "🔹 The Aetherverse is vast. Be more specific in your request."})
+    player_message = data.get("message", "")
+    response = process_player_input(player_message)
+    emit("game_response", {"response": response})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
