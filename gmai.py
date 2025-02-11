@@ -21,6 +21,63 @@ You NEVER break character. You control a living, breathing cyberpunk world fille
 All player actions require a skill check. You enforce consequences dynamically.
 You control every NPC, faction, and world event in a logical, immersive way.
 """
+# 🎭 AI-Driven Game Master Response Generator
+def generate_game_response(player_message):
+    """Dynamically generates an in-character response based on Aetherpunk lore."""
+    lower_message = player_message.lower()
+
+    # Check if the message contains lore-related terms
+    for key, value in AETHERPUNK_LORE.items():
+        if key.lower() in lower_message:
+            return f"📖 {key}: {value}"
+    
+    # Default response if no lore match is found
+    return "The world of Aetherpunk is vast. If you seek knowledge, be more specific."
+@socketio.on("chat_message")
+def handle_chat_message(data):
+    player_message = data.get("message", "")
+
+    # Prevent breaking character
+    if any(word in player_message.lower() for word in ["real world", "break character", "not a game"]):
+        emit("game_response", {
+            "response": "⛔ ERROR: You are within Aetherpunk. There is no real world. Stay in character."
+        })
+        return
+
+    # Generate immersive response using lore module
+    game_master_response = f"📜 {GMAI_PERSONALITY}\n\n🔹 You asked: '{player_message}'\n\n🔹 Game Master says: {generate_game_response(player_message)}"
+    
+    emit("game_response", {"response": game_master_response})
+
+# 📚 Aetherpunk Lore Database (Predefined World Details)
+AETHERPUNK_LORE = {
+    "Aetherverse": "The Aetherverse is a cyberpunk-fantasy universe where advanced AI, cybernetic augmentations, interstellar warfare, and black-market trade dominate. The balance between order and chaos is constantly shifting due to conflicts between megacorporations, rogue AI, and underground resistance groups.",
+    
+    # 🌍 Planets
+    "Hyperion": "Hyperion is the militarized industrial powerhouse of the Aetherverse, controlled by the Aetheric Dominion. It is known for its weapon manufacturing hubs, war-torn districts, and highly regulated economy.",
+    "Helios": "Helios is the neural cyber capital, dominated by the Volthari technocracy. A city-wide network of augmented minds and AI-driven corporations governs its cyberpunk sprawl.",
+    "Aethos": "A mysterious hybrid world, home to Aetherion experimentation. It serves as the link between pure AI and organic life, with deep black-market dealings in cybernetic and Aetheric technology.",
+    
+    # 🏢 Factions
+    "Aetheric Dominion": "The authoritarian rulers of Hyperion, maintaining strict order and controlling military technology with an iron grip. Led by Aetherus, a being infused with Aetheric energy.",
+    "Volthari Technocracy": "A council of cybernetic minds that rule Helios, seeking the perfect union between man and machine.",
+    "The Old Guard": "A rising black-market syndicate dealing in high-end cybernetics, AI warfare, and underground smuggling. Founded by Vaedros Kyron, Kain Voss, and Veyna Stryx.",
+    "Red Talons": "A ruthless mercenary faction that profits from interstellar conflicts and weapons trafficking. They operate under Krynn Vasrek, a feared but strategic warlord.",
+    
+    # ⚔️ Combat Enhancements
+    "Cyberware": "Cybernetic enhancements in the Aetherverse range from basic neural uplinks to full AI-driven augmentation suites. Many illegal upgrades allow for enhanced combat abilities but risk system corruption.",
+    "Railstorm Heavy Cannons": "High-impact rail technology designed for corporate security forces and warlords alike. Devastating against armored targets.",
+    "Specter Override Key": "A hacking tool capable of hijacking enemy AI-controlled systems for 3 minutes.",
+    
+    # ⚖️ Economy & Black Market
+    "AuroCreds": "The primary currency for physical transactions, often tied to military-industrial complexes.",
+    "NeuroCreds": "A digital currency used in high-end cybernetic trade, AI deals, and neural hacking networks.",
+    "AetherCreds": "The rarest and most valuable currency, tied to experimental Aetheric technology and AI singularity research.",
+    
+    # 🛠️ Advanced Technology
+    "Revenant Protocol AI": "A legendary rogue AI said to hold the key to breaking the balance of power in the Aetherverse. Its last known traces were encrypted within a Volthari black-site network."
+}
+
 
 # 🎲 Skill Check Mechanic
 def skill_check(player_skill_level, difficulty):
