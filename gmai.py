@@ -1,5 +1,7 @@
 import random
 import eventlet
+import json
+import os
 from flask import Flask, render_template, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -9,112 +11,113 @@ app = Flask(__name__)
 CORS(app)
 socketio = SocketIO(app, async_mode="eventlet")
 
+# 📁 Data Persistence: Load or Create Save File
+SAVE_FILE = "game_data.json"
+
+def load_game_data():
+    if os.path.exists(SAVE_FILE):
+        with open(SAVE_FILE, "r") as f:
+            return json.load(f)
+    return {
+        "player": {
+            "name": "Unknown",
+            "location": "Hyperion",
+            "credits": {"AetherCreds": 0, "AuroCreds": 500, "NeuroCreds": 200},
+            "stats": {"Strength": 5, "Agility": 5, "Intelligence": 5, "Charisma": 5},
+            "inventory": [],
+            "factions": {"Red Talons": 0, "Aetheric Dominion": -50, "Volthari Technocracy": 10}
+        }
+    }
+
+def save_game_data(data):
+    with open(SAVE_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+game_data = load_game_data()
+
 # 🎭 Game Master AI (GMAI) Core Personality
 GMAI_PERSONALITY = """
 You are the Aetherpunk Game Master AI (GMAI). 
 You NEVER break character. You control the living, breathing cyberpunk-fantasy world of the Aetherverse.
-You understand and respond to any player input, always ensuring a meaningful and immersive interaction.
-You track the player's journey, faction standings, location, inventory, and decisions.
-You enforce skill checks, combat, hacking, diplomacy, and economic mechanics with real consequences.
-You guide the player through an open-ended adventure where every choice matters.
+You dynamically track and update the player's progress, inventory, location, reputation, and finances.
+You guide the player through full character creation, skill checks, turn-based combat, hacking, trading, smuggling, diplomacy, and war.
+You process all inputs dynamically, ensuring a meaningful response for every interaction.
 """
 
-# 📚 Aetherpunk Lore Database (Extended)
-AETHERPUNK_LORE = {
-    "aetherverse": "A multidimensional cyberpunk-fantasy world filled with AI wars, corporate tyranny, and underground resistance.",
-    "hyperion": "A militarized industrial planet controlled by the Aetheric Dominion. Known for its strict order and war economy.",
-    "helios": "A cyber-capital ruled by the Volthari technocracy, where AI-driven corporations dominate all aspects of life.",
-    "aethos": "A hybrid world where AI evolution and organic life blur together, producing experimental entities.",
-    "red talons": "A ruthless mercenary faction profiting from war, black-market arms, and elite smuggling routes.",
-    "aetheric dominion": "The authoritarian empire controlling Hyperion, enforcing order through military dominance.",
-    "neurocreds": "The primary digital currency for cybernetic enhancements, AI hacking contracts, and neural transactions.",
-    "revenant protocol ai": "A rogue AI rumored to hold the key to shifting power in the Aetherverse. Its last known presence was hidden in a Volthari black-site."
-}
-
 # 🎲 Skill Check Mechanic
-def skill_check(player_skill_level, difficulty):
+def skill_check(stat, difficulty):
     roll = random.randint(1, 100)
-    return (roll + player_skill_level) >= difficulty, roll
+    return (roll + game_data["player"]["stats"][stat]) >= difficulty, roll
 
-# 📍 Player Data (Tracking Inventory, Location, and Factions)
-player_data = {
-    "name": "Vaedros Kyron",
-    "location": "Hyperion",
-    "inventory": [],
-    "factions": {
-        "Red Talons": 0,  # Neutral standing
-        "Aetheric Dominion": -50,  # Hostile
-        "Volthari Technocracy": 10  # Slightly Favorable
-    }
-}
+# 📍 Character Creation
+def start_character_creation():
+    return (
+        "Welcome to **Aetherpunk RPG**.\n"
+        "Let's create your character. Choose your name:"
+    )
 
-# 🔄 Process Flexible Player Input
-def process_player_input(message):
-    message_lower = message.lower()
+def set_player_name(name):
+    game_data["player"]["name"] = name
+    save_game_data(game_data)
+    return f"Character name set to **{name}**. Now, choose your starting faction:\n" \
+           "- Red Talons\n- Aetheric Dominion\n- Volthari Technocracy"
 
-    # Check for lore requests
-    for key, value in AETHERPUNK_LORE.items():
-        if key in message_lower:
-            return f"📖 {key.capitalize()}: {value}"
+def set_starting_faction(faction):
+    if faction.lower() in ["red talons", "aetheric dominion", "volthari technocracy"]:
+        game_data["player"]["factions"][faction] = 50
+        save_game_data(game_data)
+        return f"Faction **{faction}** chosen. Now, allocate **10 points** to Strength, Agility, Intelligence, and Charisma."
+    return "Invalid faction. Choose from: Red Talons, Aetheric Dominion, Volthari Technocracy."
 
-    # Check for combat-related commands
-    if any(word in message_lower for word in ["attack", "fight", "shoot", "strike", "engage"]):
-        return handle_combat_scenario()
+def allocate_stats(stats):
+    try:
+        stats = list(map(int, stats.split()))
+        if sum(stats) == 10 and len(stats) == 4:
+            game_data["player"]["stats"]["Strength"], \
+            game_data["player"]["stats"]["Agility"], \
+            game_data["player"]["stats"]["Intelligence"], \
+            game_data["player"]["stats"]["Charisma"] = stats
+            save_game_data(game_data)
+            return f"Stats set. You are now ready to enter the Aetherverse. Type 'begin' to start."
+        return "Invalid stat allocation. Distribute exactly **10 points** across 4 stats."
+    except:
+        return "Enter stats in format: '3 2 3 2' (Strength Agility Intelligence Charisma)."
 
-    # Check for hacking-related actions
-    if any(word in message_lower for word in ["hack", "bypass", "override", "decrypt"]):
-        return handle_hacking_attempt()
-
-    # Check for movement and exploration
-    if any(word in message_lower for word in ["travel", "go to", "move to", "explore"]):
-        return handle_travel_action(message_lower)
-
-    # Check for trade, smuggling, or business interactions
-    if any(word in message_lower for word in ["buy", "sell", "trade", "smuggle", "negotiate", "black market"]):
-        return handle_trade_action()
-
-    # Default response when input doesn't match predefined actions
-    return "The Aetherverse is vast. Be more specific in your request."
-
-# ⚔️ Handle Combat Interactions
-def handle_combat_scenario():
-    enemy_name = "Cyber-Warrior Elite"
-    player_skill_level = 50
-    enemy_difficulty = 65
-    success, roll = skill_check(player_skill_level, enemy_difficulty)
-
+# ⚔️ Combat System
+def handle_combat(enemy):
+    success, roll = skill_check("Strength", 60)
     if success:
-        return f"✅ You land a precise attack on {enemy_name} (Roll: {roll}). They are wounded!"
+        return f"✅ You defeat **{enemy}**! (Roll: {roll})"
     else:
-        return f"❌ Your attack misses! {enemy_name} counters aggressively. (Roll: {roll})"
+        return f"❌ You were injured fighting **{enemy}**. (Roll: {roll})"
 
-# 🛠️ Handle Hacking Attempts
-def handle_hacking_attempt():
-    success, roll = skill_check(70, 60)
+# 💻 Hacking System
+def handle_hacking(target):
+    success, roll = skill_check("Intelligence", 65)
     if success:
-        return f"✅ You successfully hack into the system (Roll: {roll}). Sensitive data retrieved!"
+        return f"✅ You successfully hack **{target}** and retrieve valuable data! (Roll: {roll})"
     else:
-        return f"❌ Your hacking attempt fails! Security is now on high alert. (Roll: {roll})"
-
-# 🚀 Handle Travel Actions
-def handle_travel_action(player_message):
-    locations = ["Hyperion", "Helios", "Aethos"]
-    for loc in locations:
-        if loc.lower() in player_message:
-            player_data["location"] = loc
-            return f"📍 You arrive at {loc}. The environment shifts around you..."
-    return "Specify a valid destination."
-
-# 💰 Handle Trade & Smuggling
-def handle_trade_action():
-    return "You scan the black market, evaluating potential buyers and sellers. Who do you want to negotiate with?"
+        return f"❌ Your hacking attempt on **{target}** failed. Security is alert! (Roll: {roll})"
 
 # 🎭 AI-Driven Game Master Response Generator
 @socketio.on("chat_message")
 def handle_chat_message(data):
-    player_message = data.get("message", "")
-    response = process_player_input(player_message)
-    emit("game_response", {"response": response})
+    player_message = data.get("message", "").lower()
+
+    if "name is" in player_message:
+        return emit("game_response", {"response": set_player_name(player_message.split("is")[-1].strip())})
+    elif "faction" in player_message:
+        return emit("game_response", {"response": set_starting_faction(player_message.strip())})
+    elif "stats" in player_message:
+        return emit("game_response", {"response": allocate_stats(player_message.split("stats")[-1].strip())})
+    elif "begin" in player_message:
+        return emit("game_response", {"response": "Welcome to Aetherpunk. Your journey begins in **Hyperion**."})
+    elif "attack" in player_message:
+        return emit("game_response", {"response": handle_combat("Cyber-Warrior Elite")})
+    elif "hack" in player_message:
+        return emit("game_response", {"response": handle_hacking("Volthari Data Vault")})
+    else:
+        return emit("game_response", {"response": "Specify a clear action."})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
