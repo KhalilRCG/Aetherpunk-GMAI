@@ -80,7 +80,8 @@ def handle_chat_message(data):
     response = generate_dynamic_story(player_message)
     return emit("game_response", {"response": response})
 
-# 🌟 Serve the Web UI Correctly
+from flask import send_from_directory
+
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
