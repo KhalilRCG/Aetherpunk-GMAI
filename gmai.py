@@ -14,18 +14,23 @@ socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 # 📁 Data Persistence: Load or Create Save File
 SAVE_FILE = "game_data.json"
+LEARNING_FILE = "learning_data.json"
 
-def load_game_data():
-    if os.path.exists(SAVE_FILE):
-        with open(SAVE_FILE, "r") as f:
+def load_data(file_name, default_value):
+    """Loads JSON data from a file or returns a default value if the file doesn't exist."""
+    if os.path.exists(file_name):
+        with open(file_name, "r") as f:
             return json.load(f)
-    return {}
+    return default_value
 
-def save_game_data():
-    with open(SAVE_FILE, "w") as f:
-        json.dump(game_data, f, indent=4)
+def save_data(file_name, data):
+    """Saves JSON data to a file."""
+    with open(file_name, "w") as f:
+        json.dump(data, f, indent=4)
 
-game_data = load_game_data()
+# Load game and learning data
+game_data = load_data(SAVE_FILE, {})
+learning_data = load_data(LEARNING_FILE, {})
 
 # 🌍 Default Player Data
 DEFAULT_PLAYER = {
@@ -41,7 +46,8 @@ DEFAULT_PLAYER = {
     "inventory": [],
     "factions": {"Aetheric Dominion": -100, "Red Talons": 0, "Volthari Technocracy": 0},
     "missions": [],
-    "last_prompt": None
+    "last_prompt": None,
+    "pending_name": None
 }
 
 # 🌐 Context-Aware Input Recognition
@@ -71,51 +77,53 @@ def infer_player_intent(user_input):
             return category
     return None
 
+# 🌟 **Self-Learning System**
+def learn_response(user_input, bot_response):
+    """Stores player inputs and chatbot responses for future learning."""
+    learning_data[user_input] = bot_response
+    save_data(LEARNING_FILE, learning_data)
+
+def get_learned_response(user_input):
+    """Retrieves a response from the chatbot's memory if a similar input exists."""
+    return learning_data.get(user_input, None)
+
 # 📍 Character Creation & Game Setup
 def start_new_game():
     game_data["player"] = DEFAULT_PLAYER.copy()
-    save_game_data()
+    save_data(SAVE_FILE, game_data)
     game_data["player"]["last_prompt"] = "confirm_new_game"
     return "🌌 **Start a new game? (yes/no)**"
 
 def confirm_new_game(response):
     if response in ["yes", "y"]:
         game_data["player"] = DEFAULT_PLAYER.copy()
-        save_game_data()
+        save_data(SAVE_FILE, game_data)
         game_data["player"]["last_prompt"] = "name_prompt"
-        return "🎭 **Let's start with your name.** Say: `I'm [Name]` or `Call me [Name]`."
+        return "🎭 **So what do we call you?** Type your name."
     return "❌ **Cancelled.** Returning to previous prompt."
-
-def confirm_action(response, action):
-    if response in ["yes", "y"]:
-        if action == "save":
-            save_game_data()
-            return "💾 **Game saved!** Back to business."
-        elif action == "load":
-            return load_existing_game()
-    return "❌ **Cancelled.** Returning to previous prompt."
-
-def load_existing_game():
-    if "player" in game_data and game_data["player"]["name"]:
-        return f"Loading save file... Welcome back, **{game_data['player']['name']}**. What’s next?"
-    return "No saved game found. Type **new game** to start fresh."
 
 def set_player_name(name):
+    game_data["pending_name"] = name  # Store for confirmation
     game_data["player"]["last_prompt"] = "confirm_name"
     return f"🔷 **You chose `{name}`. Confirm? (yes/no)**"
 
-def confirm_name(response, name):
+def confirm_name(response):
     if response in ["yes", "y"]:
-        game_data["player"]["name"] = name
-        save_game_data()
+        game_data["player"]["name"] = game_data["pending_name"]
+        save_data(SAVE_FILE, game_data)
         game_data["player"]["last_prompt"] = "species_prompt"
-        return f"✅ **Got it, {name}.** Now pick your **species**: Aetherion, Pyronax, or Volthari."
+        return f"✅ **Got it, {game_data['player']['name']}**. Now pick your **species**: Aetherion, Pyronax, or Volthari."
     return "❌ **Name change cancelled.** What name should I call you?"
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
 def handle_chat_message(data):
-    player_message = data.get("message", "").strip().lower()
+    player_message = data.get("message", "").strip()
+
+    # **Self-Learning Check**
+    learned_response = get_learned_response(player_message)
+    if learned_response:
+        return emit("game_response", {"response": learned_response})
 
     # **Infer Meaning for "New Game" Inputs**
     if infer_player_intent(player_message) == "start_game":
@@ -123,31 +131,29 @@ def handle_chat_message(data):
 
     # **Yes/No Confirmation Screens**
     if game_data["player"]["last_prompt"] == "confirm_new_game":
-        return emit("game_response", {"response": confirm_new_game(player_message)})
+        return emit("game_response", {"response": confirm_new_game(player_message.lower())})
 
     if game_data["player"]["last_prompt"] == "confirm_name":
-        return emit("game_response", {"response": confirm_name(player_message, game_data['player']['name'])})
+        return emit("game_response", {"response": confirm_name(player_message.lower())})
 
-    # **Help Command Fix (Returns to Previous Prompt)**
-    if "help" in player_message:
-        return emit("game_response", {"response": "📜 **Tip:** Just type what you want! Example: `I want cyberware.`\n\nReturning to previous prompt..."})
+    # **Handling Name Input**
+    if game_data["player"]["last_prompt"] == "name_prompt":
+        return emit("game_response", {"response": set_player_name(player_message)})
 
-    # **"Go Back" Command to Return to Last Prompt**
-    if infer_player_intent(player_message) == "go_back":
-        return emit("game_response", {"response": f"🔄 Returning to last prompt: {game_data['player']['last_prompt']}"})
+    # **Learn from Mistakes (If the bot gets corrected)**
+    if "wrong" in player_message or "not right" in player_message:
+        game_data["player"]["last_prompt"] = "correct_response"
+        return emit("game_response", {"response": "🤖 **Got it!** What should I have said instead?"})
 
-    # **Dynamic Inferred Inputs for Shops, Missions, etc.**
-    inferred_category = infer_player_intent(player_message)
-    if inferred_category:
-        responses = {
-            "shop": "🛒 **You want to shop?** Here’s a vendor list: 1) Weapons, 2) Cyberware, 3) Ships, 4) Black Market Mods. What are you buying?",
-            "weapons": "🔫 **Weapons Available:** Plasma Rifles (500 AC), Laser Blades (700 AC), Ion Shotguns (1200 AC). Interested?",
-            "cyberware": "🤖 **Cyberware Upgrades:** Neural Hacks (1200 NC), Reflex Boosters (2500 NC), Stealth Cloaks (3000 NC). What do you want?",
-            "missions": "📜 **Available Missions:** 1) Data Heist (8000 NC), 2) Merc Job (10K AC), 3) Smuggling Run (12K AC). Pick one."
-        }
-        return emit("game_response", {"response": responses[inferred_category]})
+    if game_data["player"]["last_prompt"] == "correct_response":
+        learn_response(game_data["player"]["last_input"], player_message)
+        game_data["player"]["last_prompt"] = None
+        return emit("game_response", {"response": "✅ **Understood!** I'll remember that next time."})
 
-    return emit("game_response", {"response": "🌀 **Mysterious words... but this is the Aetherverse. Let's roll with it. What's next?**"})
+    # **Unknown Input (Learn from the player)**
+    game_data["player"]["last_input"] = player_message
+    game_data["player"]["last_prompt"] = "correct_response"
+    return emit("game_response", {"response": "🌀 **I’m not sure... how should I respond to that next time?**"})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
