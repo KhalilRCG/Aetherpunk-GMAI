@@ -86,6 +86,8 @@ def index():
     return send_from_directory("static", "index.html")
 
 # 🚀 Run the WebSocket Server
+import os
+
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Auto-detect Render's assigned port
+    port = int(os.environ.get("PORT", 10000))  # Use Render's dynamically assigned port
     socketio.run(app, host="0.0.0.0", port=port)
