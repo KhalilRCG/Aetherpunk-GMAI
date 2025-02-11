@@ -1,1 +1,26 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Aetherpunk Game Master</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
+</head>
+<body>
+    <h1>Aetherpunk RPG - AI Game Master</h1>
+    <input id="playerInput" type="text" placeholder="Enter your action..." />
+    <button onclick="sendAction()">Submit</button>
+    <div id="response"></div>
 
+    <script>
+        var socket = io("https://aetherpunk-gmai.onrender.com"); // Replace with your Render URL
+
+        function sendAction() {
+            var action = document.getElementById("playerInput").value;
+            socket.emit("player_action", { action: action, skill_level: 50 });
+        }
+
+        socket.on("game_response", function(data) {
+            document.getElementById("response").innerText = data.response;
+        });
+    </script>
+</body>
+</html>
