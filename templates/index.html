@@ -4,8 +4,9 @@
     <title>Aetherpunk GM AI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
     <style>
-        body { background-color: black; color: #00FF00; font-family: "Courier New", monospace; text-align: center; padding: 20px; }
-        input, button { font-size: 16px; padding: 10px; background-color: black; color: #00FF00; border: 1px solid #00FF00; }
+        body { background-color: black; color: #00FF00; font-family: "Courier New", monospace; text-align: center; padding: 30px; }
+        input, button { font-size: 18px; padding: 12px; margin: 15px; background-color: black; color: #00FF00; border: 2px solid #00FF00; }
+        #response { font-size: 20px; line-height: 1.8; max-width: 80%; margin: auto; }
     </style>
 </head>
 <body>
@@ -19,10 +20,8 @@
         function sendAction() { 
             var action = document.getElementById("playerInput").value;
             socket.emit("chat_message", { message: action });
+            document.getElementById("playerInput").value = ""; 
         }
-        socket.on("game_response", function(data) {
-            document.getElementById("response").innerText = data.response;
-        });
     </script>
 </body>
 </html>
