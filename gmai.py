@@ -38,7 +38,7 @@ DEFAULT_PLAYER = {
     "credits": {"AetherCreds": 0, "AuroCreds": 500, "NeuroCreds": 200},
     "stats": {"Strength": 5, "Agility": 5, "Intelligence": 5, "Charisma": 5},
     "inventory": [],
-    "factions": {"Red Talons": 0, "Aetheric Dominion": -50, "Volthari Technocracy": 10},
+    "factions": {"Aetheric Dominion": -100, "Red Talons": 0, "Volthari Technocracy": 0},
     "missions": []
 }
 
@@ -68,12 +68,13 @@ def set_player_name(name):
     game_data["player"]["name"] = name
     save_game_data()
     return ("✅ Character name set. Now, choose your **species**:"
-            "\n- **Aetherion** (Hybrid beings, connected to the Aetheric energy)"
+            "\n- **Aetherion** (Hybrid beings, connected to Aetheric energy)"
             "\n- **Pyronax** (Plasma-based warriors, strong and durable)"
             "\n- **Volthari** (Electrokinetic cybernetic species)"
-            "\nType: **I choose [Species]**")
+            "\nType your species choice.")
 
 def set_species(species):
+    species = species.capitalize()
     valid_species = ["Aetherion", "Pyronax", "Volthari"]
     if species in valid_species:
         game_data["player"]["species"] = species
@@ -82,13 +83,13 @@ def set_species(species):
                 "\n- **Hacker** (Master of cyberwarfare)"
                 "\n- **Mercenary** (Combat expert, skilled in ranged/melee combat)"
                 "\n- **Smuggler** (Underworld expert, fast-talker and trader)"
-                "\nType: **I choose [Archetype]**")
+                "\nType your archetype choice.")
     return "⚠️ Invalid species. Choose: Aetherion, Pyronax, or Volthari."
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
 def handle_chat_message(data):
-    player_message = data.get("message", "").lower()
+    player_message = data.get("message", "").strip().lower()
 
     # Game Start Commands
     if "new game" in player_message or "start game" in player_message:
@@ -99,12 +100,11 @@ def handle_chat_message(data):
         return emit("game_response", {"response": save_game()})
 
     # Character Creation Commands
-    elif "name is" in player_message:
-        return emit("game_response", {"response": set_player_name(player_message.split("is")[-1].strip())})
-    elif "choose" in player_message:
-        words = player_message.split()
-        if "species" in words:
-            return emit("game_response", {"response": set_species(words[-1].capitalize())})
+    elif player_message.startswith("my name is"):
+        name = player_message.replace("my name is", "").strip().title()
+        return emit("game_response", {"response": set_player_name(name)})
+    elif player_message in ["aetherion", "pyronax", "volthari"]:
+        return emit("game_response", {"response": set_species(player_message)})
 
     # Default Response
     else:
