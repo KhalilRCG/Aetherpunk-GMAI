@@ -1,52 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Aetherpunk Game Master AI</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.0.1/socket.io.js"></script>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            background-color: #121212;
-            color: #ffffff;
-            text-align: center;
-            padding: 20px;
-        }
-        h1 {
-            color: #ff9800;
-        }
-        input, button {
-            font-size: 16px;
-            padding: 10px;
-            margin: 10px;
-        }
-        input {
-            width: 60%;
-            background-color: #222;
-            color: white;
-            border: 1px solid #ff9800;
-            padding: 10px;
-        }
-        button {
-            background-color: #ff9800;
-            color: black;
-            border: none;
-            cursor: pointer;
-        }
-        button:hover {
-            background-color: #e67e00;
-        }
-        #response {
-            margin-top: 20px;
-            padding: 10px;
-            background-color: #222;
-            border: 1px solid #ff9800;
-            display: inline-block;
-            max-width: 80%;
-            word-wrap: break-word;
-        }
-    </style>
 </head>
 <body>
     <h1>Aetherpunk RPG - AI Game Master</h1>
@@ -55,7 +11,7 @@
     <div id="response">The Game Master is waiting for your command...</div>
 
     <script>
-        var socket = io("https://aetherpunk-gmai.onrender.com");  // REPLACE WITH YOUR RENDER URL
+        var socket = io("https://aetherpunk-gmai.onrender.com"); // Replace with your actual Render URL
 
         function sendAction() {
             var action = document.getElementById("playerInput").value;
@@ -69,4 +25,3 @@
     </script>
 </body>
 </html>
-
