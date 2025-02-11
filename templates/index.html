@@ -9,15 +9,10 @@
             color: #00FF00;
             font-family: "Courier New", monospace;
             text-align: center;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            height: 100vh;
-            margin: 0;
+            padding: 50px;
         }
         h1 {
-            font-size: 38px;
-            margin-bottom: 20px;
+            font-size: 36px;
         }
         input, button {
             font-size: 20px;
@@ -26,52 +21,22 @@
             background-color: black;
             color: #00FF00;
             border: 2px solid #00FF00;
-            text-align: center;
         }
         input {
             width: 50%;
         }
         #response {
-            font-size: 24px;
+            font-size: 22px;
             line-height: 1.5;
             max-width: 75%;
-            margin: 15px auto;
-            text-align: center;
+            margin: auto;
         }
     </style>
 </head>
 <body>
     <h1>Aetherpunk RPG - Game Master AI</h1>
-    <input id="playerInput" type="text" placeholder="Enter your action..." onkeypress="handleKeyPress(event)"/>
+    <input id="playerInput" type="text" placeholder="Type here..." onkeypress="handleKeyPress(event)"/>
     <button onclick="sendAction()">Submit</button>
-    <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
-
-    <script>
-        var socket = io("https://aetherpunk-gmai.onrender.com");
-        var allowInput = true;  // Prevents multiple submissions at once
-
-        function sendAction() { 
-            if (!allowInput) return;
-            allowInput = false;  // Prevents multiple rapid submissions
-
-            var action = document.getElementById("playerInput").value.trim();
-            if (action !== "") {
-                socket.emit("chat_message", { message: action });
-                document.getElementById("playerInput").value = "";
-            }
-
-            setTimeout(() => { allowInput = true; }, 1000); // Prevent spam
-        }
-
-        function handleKeyPress(event) {
-            if (event.key === "Enter") {
-                sendAction();
-            }
-        }
-
-        socket.on("game_response", function(data) {
-            document.getElementById("response").innerText = data.response;
-        });
-    </script>
+    <div id="response">🚀 Welcome to the Aetherverse. Type 'new game' to begin.</div>
 </body>
 </html>
