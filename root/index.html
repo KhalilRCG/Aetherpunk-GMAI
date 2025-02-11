@@ -43,13 +43,15 @@
     <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
 
     <script>
-        var socket = io("https://your-render-service.onrender.com"); // Use your actual Render URL
+        var socket = io("https://your-render-service.onrender.com");
 
         function sendAction() {
             var action = document.getElementById("playerInput").value.trim();
             if (action !== "") {
+                document.getElementById("response").innerText = "Loading...";
                 socket.emit("chat_message", { message: action });
                 document.getElementById("playerInput").value = "";
+                document.getElementById("playerInput").focus();
             }
         }
 
@@ -60,9 +62,7 @@
         }
 
         socket.on("game_response", function(data) {
-            var responseDiv = document.getElementById("response");
-            responseDiv.innerText = data.response;
-            responseDiv.scrollTop = responseDiv.scrollHeight;  // Auto-scroll to latest response
+            document.getElementById("response").innerText = data.response;
         });
     </script>
 </body>
