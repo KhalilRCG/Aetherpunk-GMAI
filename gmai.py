@@ -99,11 +99,13 @@ def generate_dynamic_story(player_message):
         game_data["player"]["history"] = game_data["player"]["history"][-30:]  # Memory expanded to 30 interactions
 
         prompt = f"{game_data['player']['history']}\nPlayer: {player_message}\nGM:"
-        response = openai.Completion.create(
-            model="text-davinci-003",
-            prompt=prompt,
-            max_tokens=300
-        ).get("choices", [{}])[0].get("text", "").strip()
+        response = openai.ChatCompletion.create(
+    model="gpt-4o",
+    messages=[{"role": "system", "content": "You are the Aetherpunk Game Master, guiding the player through an interactive RPG adventure."},
+              {"role": "user", "content": prompt}],
+    max_tokens=300
+)
+
 
         game_data["player"]["history"].append(f"Player: {player_message}")
         game_data["player"]["history"].append(f"GM: {response}")
