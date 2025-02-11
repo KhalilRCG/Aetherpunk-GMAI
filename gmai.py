@@ -9,7 +9,7 @@ from flask_cors import CORS
 # Initialize Flask & WebSocket
 app = Flask(__name__)
 CORS(app)
-socketio = SocketIO(app, async_mode="eventlet")
+socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
 # 📁 Data Persistence: Load or Create Save File
 SAVE_FILE = "game_data.json"
@@ -25,15 +25,6 @@ def save_game_data():
         json.dump(game_data, f, indent=4)
 
 game_data = load_game_data()
-
-# 🎭 Game Master AI (GMAI) Core Personality
-GMAI_PERSONALITY = """
-You are the Aetherpunk Game Master AI (GMAI).
-You NEVER break character. You control the immersive cyberpunk-fantasy world of the Aetherverse.
-You prompt the player for every major decision, guiding them through a fully interactive experience.
-You generate events, activities, and opportunities relevant to the player's location.
-You adapt dynamically, providing engaging story elements based on any user input.
-"""
 
 # 🌍 Default Player Data
 DEFAULT_PLAYER = {
@@ -60,7 +51,7 @@ def skill_check(stat, difficulty):
 def start_new_game():
     game_data["player"] = DEFAULT_PLAYER.copy()
     save_game_data()
-    return ("Welcome to **Aetherpunk RPG**. \nLet's begin by choosing your **character's name**."
+    return ("🌌 Welcome to **Aetherpunk RPG**.\n\nLet's begin by choosing your **character's name**."
             "\nType: **My name is [Your Name]**")
 
 def load_existing_game():
@@ -71,12 +62,12 @@ def load_existing_game():
 
 def save_game():
     save_game_data()
-    return "Game progress saved."
+    return "💾 Game progress saved."
 
 def set_player_name(name):
     game_data["player"]["name"] = name
     save_game_data()
-    return ("Character name set. Now, choose your **species**:"
+    return ("✅ Character name set. Now, choose your **species**:"
             "\n- **Aetherion** (Hybrid beings, connected to the Aetheric energy)"
             "\n- **Pyronax** (Plasma-based warriors, strong and durable)"
             "\n- **Volthari** (Electrokinetic cybernetic species)"
@@ -87,24 +78,12 @@ def set_species(species):
     if species in valid_species:
         game_data["player"]["species"] = species
         save_game_data()
-        return ("Species set. Now, choose your **RPG archetype**:"
+        return ("✅ Species set. Now, choose your **RPG archetype**:"
                 "\n- **Hacker** (Master of cyberwarfare)"
                 "\n- **Mercenary** (Combat expert, skilled in ranged/melee combat)"
                 "\n- **Smuggler** (Underworld expert, fast-talker and trader)"
                 "\nType: **I choose [Archetype]**")
-    return "Invalid species. Choose: Aetherion, Pyronax, or Volthari."
-
-def set_archetype(archetype):
-    valid_archetypes = ["Hacker", "Mercenary", "Smuggler"]
-    if archetype in valid_archetypes:
-        game_data["player"]["archetype"] = archetype
-        save_game_data()
-        return ("Archetype set. Now, choose your **starting planet**:"
-                "\n- **Hyperion** (Military-Industrial world, corporate power struggles)"
-                "\n- **Helios** (Cyberpunk capital, dominated by AI and tech syndicates)"
-                "\n- **Aethos** (Aetheric hybrid world, home to scientific anomalies)"
-                "\nType: **I choose [Planet]**")
-    return "Invalid archetype. Choose: Hacker, Mercenary, or Smuggler."
+    return "⚠️ Invalid species. Choose: Aetherion, Pyronax, or Volthari."
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
@@ -126,12 +105,10 @@ def handle_chat_message(data):
         words = player_message.split()
         if "species" in words:
             return emit("game_response", {"response": set_species(words[-1].capitalize())})
-        elif "archetype" in words:
-            return emit("game_response", {"response": set_archetype(words[-1].capitalize())})
 
     # Default Response
     else:
-        return emit("game_response", {"response": "Specify a clear action. If unsure, type **help**."})
+        return emit("game_response", {"response": "❔ Specify a clear action. If unsure, type **help**."})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
