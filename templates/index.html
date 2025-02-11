@@ -40,28 +40,17 @@
     <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
 
     <script>
-        var socket = io("https://aetherpunk-gmai.onrender.com");
-        var allowInput = true;
-
-        function sendAction() { 
-            if (!allowInput) return;
-            allowInput = false;
-
+        var socket = io();
+        function sendAction() {
             var action = document.getElementById("playerInput").value.trim();
-            if (action !== "") {
-                socket.emit("chat_message", { message: action });
-                document.getElementById("playerInput").value = "";
-            }
-
-            setTimeout(() => { allowInput = true; }, 1000);
+            socket.emit("chat_message", { message: action });
+            document.getElementById("playerInput").value = "";
         }
-
         function handleKeyPress(event) {
             if (event.key === "Enter") {
                 sendAction();
             }
         }
-
         socket.on("game_response", function(data) {
             document.getElementById("response").innerText = data.response;
         });
