@@ -3,6 +3,7 @@ import eventlet
 import json
 import os
 import re
+import traceback
 from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
@@ -15,6 +16,7 @@ socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 # 📁 Data Persistence: Load or Create Save File
 SAVE_FILE = "game_data.json"
 LEARNING_FILE = "learning_data.json"
+ERROR_LOG = "error_log.txt"
 
 def load_data(file_name, default_value):
     """Loads JSON data from a file or returns a default value if the file doesn't exist."""
@@ -50,34 +52,7 @@ DEFAULT_PLAYER = {
     "pending_name": None
 }
 
-# 🌐 Context-Aware Input Recognition
-def extract_valid_choice(user_input, valid_choices):
-    """Checks if the user's input contains a valid choice (even within a sentence)."""
-    for choice in valid_choices:
-        if re.search(rf"\b{choice}\b", user_input, re.IGNORECASE):
-            return choice
-    return None
-
-def infer_player_intent(user_input):
-    """Dynamically interprets user intent from ANY valid Aetherpunk concept."""
-    keywords = {
-        "start_game": ["start", "new", "begin", "restart"],
-        "shop": ["shop", "shopping", "store", "market", "vendor", "buy", "sell"],
-        "weapons": ["weapons", "guns", "firearms", "blades", "armory"],
-        "cyberware": ["cyberware", "implants", "augmentations", "mods", "upgrades"],
-        "ships": ["ship", "starship", "spaceship", "freighter", "vessel"],
-        "credits": ["credits", "money", "currency", "aethercreds", "aurocreds", "neurocreds"],
-        "missions": ["mission", "job", "task", "quest", "bounty"],
-        "travel": ["travel", "move", "relocate", "warp", "jump", "leave", "fly"],
-        "go_back": ["back", "go back", "return", "previous"]
-    }
-
-    for category, words in keywords.items():
-        if any(word in user_input for word in words):
-            return category
-    return None
-
-# 🌟 **Self-Learning System**
+# 🌟 AI Self-Learning System
 def learn_response(user_input, bot_response):
     """Stores player inputs and chatbot responses for future learning."""
     learning_data[user_input] = bot_response
@@ -86,6 +61,22 @@ def learn_response(user_input, bot_response):
 def get_learned_response(user_input):
     """Retrieves a response from the chatbot's memory if a similar input exists."""
     return learning_data.get(user_input, None)
+
+# 🚨 AI Self-Troubleshooting
+def log_error(error_message):
+    """Logs errors for troubleshooting and self-analysis."""
+    with open(ERROR_LOG, "a") as f:
+        f.write(f"{error_message}\n")
+
+def self_diagnose():
+    """Runs an internal diagnostic to identify any issues."""
+    try:
+        load_data(SAVE_FILE, {})
+        load_data(LEARNING_FILE, {})
+        return "✅ Self-diagnostic complete. No errors detected."
+    except Exception as e:
+        log_error(traceback.format_exc())
+        return f"⚠️ **Error detected:** {str(e)}. Check `error_log.txt` for details."
 
 # 📍 Character Creation & Game Setup
 def start_new_game():
@@ -102,19 +93,6 @@ def confirm_new_game(response):
         return "🎭 **So what do we call you?** Type your name."
     return "❌ **Cancelled.** Returning to previous prompt."
 
-def set_player_name(name):
-    game_data["pending_name"] = name  # Store for confirmation
-    game_data["player"]["last_prompt"] = "confirm_name"
-    return f"🔷 **You chose `{name}`. Confirm? (yes/no)**"
-
-def confirm_name(response):
-    if response in ["yes", "y"]:
-        game_data["player"]["name"] = game_data["pending_name"]
-        save_data(SAVE_FILE, game_data)
-        game_data["player"]["last_prompt"] = "species_prompt"
-        return f"✅ **Got it, {game_data['player']['name']}**. Now pick your **species**: Aetherion, Pyronax, or Volthari."
-    return "❌ **Name change cancelled.** What name should I call you?"
-
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
 def handle_chat_message(data):
@@ -125,35 +103,21 @@ def handle_chat_message(data):
     if learned_response:
         return emit("game_response", {"response": learned_response})
 
+    # **Self-Troubleshooting**
+    if "diagnose" in player_message or "self-check" in player_message:
+        return emit("game_response", {"response": self_diagnose()})
+
     # **Infer Meaning for "New Game" Inputs**
-    if infer_player_intent(player_message) == "start_game":
+    if "start" in player_message or "new game" in player_message:
         return emit("game_response", {"response": start_new_game()})
-
-    # **Yes/No Confirmation Screens**
-    if game_data["player"]["last_prompt"] == "confirm_new_game":
-        return emit("game_response", {"response": confirm_new_game(player_message.lower())})
-
-    if game_data["player"]["last_prompt"] == "confirm_name":
-        return emit("game_response", {"response": confirm_name(player_message.lower())})
 
     # **Handling Name Input**
     if game_data["player"]["last_prompt"] == "name_prompt":
-        return emit("game_response", {"response": set_player_name(player_message)})
+        game_data["player"]["pending_name"] = player_message
+        game_data["player"]["last_prompt"] = "confirm_name"
+        return emit("game_response", {"response": f"🔷 **You chose `{player_message}`. Confirm? (yes/no)**"})
 
-    # **Learn from Mistakes (If the bot gets corrected)**
-    if "wrong" in player_message or "not right" in player_message:
-        game_data["player"]["last_prompt"] = "correct_response"
-        return emit("game_response", {"response": "🤖 **Got it!** What should I have said instead?"})
-
-    if game_data["player"]["last_prompt"] == "correct_response":
-        learn_response(game_data["player"]["last_input"], player_message)
-        game_data["player"]["last_prompt"] = None
-        return emit("game_response", {"response": "✅ **Understood!** I'll remember that next time."})
-
-    # **Unknown Input (Learn from the player)**
-    game_data["player"]["last_input"] = player_message
-    game_data["player"]["last_prompt"] = "correct_response"
-    return emit("game_response", {"response": "🌀 **I’m not sure... how should I respond to that next time?**"})
+    return emit("game_response", {"response": "🌀 **I'm not sure... how should I respond to that next time?**"})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
