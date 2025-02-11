@@ -74,17 +74,26 @@ def set_player_name(name):
             "\nType your species choice.")
 
 def set_species(species):
-    species = species.capitalize()
-    valid_species = ["Aetherion", "Pyronax", "Volthari"]
+    species = species.lower()
+    valid_species = {"aetherion": "Aetherion", "pyronax": "Pyronax", "volthari": "Volthari"}
     if species in valid_species:
-        game_data["player"]["species"] = species
+        game_data["player"]["species"] = valid_species[species]
         save_game_data()
         return ("✅ Species set. Now, choose your **RPG archetype**:"
-                "\n- **Hacker** (Master of cyberwarfare)"
-                "\n- **Mercenary** (Combat expert, skilled in ranged/melee combat)"
-                "\n- **Smuggler** (Underworld expert, fast-talker and trader)"
+                "\n- **Hacker (Hack)** (Master of cyberwarfare)"
+                "\n- **Mercenary (Merc)** (Combat expert, skilled in ranged/melee combat)"
+                "\n- **Smuggler (Smug)** (Underworld expert, fast-talker and trader)"
                 "\nType your archetype choice.")
     return "⚠️ Invalid species. Choose: Aetherion, Pyronax, or Volthari."
+
+def set_archetype(archetype):
+    archetype = archetype.lower()
+    valid_archetypes = {"hacker": "Hacker", "hack": "Hacker", "mercenary": "Mercenary", "merc": "Mercenary", "smuggler": "Smuggler", "smug": "Smuggler"}
+    if archetype in valid_archetypes:
+        game_data["player"]["archetype"] = valid_archetypes[archetype]
+        save_game_data()
+        return "✅ Archetype set. You are ready to enter the Aetherverse. Type **begin** to start."
+    return "⚠️ Invalid archetype. Choose: Hacker, Mercenary, or Smuggler."
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
@@ -105,10 +114,12 @@ def handle_chat_message(data):
         return emit("game_response", {"response": set_player_name(name)})
     elif player_message in ["aetherion", "pyronax", "volthari"]:
         return emit("game_response", {"response": set_species(player_message)})
+    elif player_message in ["hack", "hacker", "merc", "mercenary", "smug", "smuggler"]:
+        return emit("game_response", {"response": set_archetype(player_message)})
 
-    # Default Response
+    # Default Response (Always Meaningful)
     else:
-        return emit("game_response", {"response": "❔ Specify a clear action. If unsure, type **help**."})
+        return emit("game_response", {"response": "🌀 Interesting input... let's turn it into something meaningful! What do you want to do next?"})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
