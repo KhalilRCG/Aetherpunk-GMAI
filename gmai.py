@@ -3,7 +3,7 @@ import json
 import random
 import eventlet
 import openai
-import traceback
+import traceback 
 from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
