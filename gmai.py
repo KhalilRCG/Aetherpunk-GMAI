@@ -1,15 +1,15 @@
+import os
+import json
 import random
 import eventlet
-import json
-import os
 import openai
 import traceback
-from flask import Flask, render_template, request
+from flask import Flask, send_from_directory, request
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
-# Initialize Flask & WebSocket
-app = Flask(__name__)
+# Initialize Flask app & WebSocket
+app = Flask(__name__, static_folder="static")
 CORS(app)
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 
@@ -80,10 +80,12 @@ def handle_chat_message(data):
     response = generate_dynamic_story(player_message)
     return emit("game_response", {"response": response})
 
+# 🌟 Serve the Web UI Correctly
+@app.route("/")
+def index():
+    return send_from_directory("static", "index.html")
+
 # 🚀 Run the WebSocket Server
-import os
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Use Render's PORT env variable
+    port = int(os.environ.get("PORT", 10000))  # Auto-detect Render's assigned port
     socketio.run(app, host="0.0.0.0", port=port)
-
