@@ -30,6 +30,7 @@
             line-height: 1.5;
             max-width: 75%;
             margin: auto;
+            white-space: pre-wrap;
         }
     </style>
 </head>
@@ -40,12 +41,16 @@
     <div id="response">🚀 Welcome to the Aetherverse. Type **new game** to begin.</div>
 
     <script>
-        var socket = io("https://aetherpunk-gmai.onrender.com"); // Use your actual Render service URL
+        var socket = io("https://your-render-service.onrender.com");
 
         function sendAction() {
             var action = document.getElementById("playerInput").value.trim();
-            socket.emit("chat_message", { message: action });
-            document.getElementById("playerInput").value = "";
+            if (action !== "") {
+                document.getElementById("response").innerText = "Loading...";
+                socket.emit("chat_message", { message: action });
+                document.getElementById("playerInput").value = "";
+                document.getElementById("playerInput").focus();
+            }
         }
 
         function handleKeyPress(event) {
