@@ -4,11 +4,11 @@ import random
 import eventlet
 import openai
 import traceback
-from flask import Flask, send_from_directory, request
+from flask import Flask, send_from_directory, request, jsonify
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
-# Initialize Flask app & WebSocket
+# Initialize Flask & WebSocket
 app = Flask(__name__, static_folder="static")
 CORS(app)
 socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
@@ -16,7 +16,7 @@ socketio = SocketIO(app, async_mode="eventlet", cors_allowed_origins="*")
 # OpenAI API Key (Replace with your actual API key)
 openai.api_key = "YOUR_OPENAI_API_KEY"
 
-# 📁 Data Persistence: Load or Create Save File
+# 📁 Load or Create Save File
 SAVE_FILE = "game_data.json"
 
 def load_data(file_name, default_value):
@@ -27,6 +27,7 @@ def load_data(file_name, default_value):
     return default_value
 
 def save_data(file_name, data):
+    """Saves game data persistently."""
     with open(file_name, "w") as f:
         json.dump(data, f, indent=4)
 
@@ -77,18 +78,18 @@ def generate_dynamic_story(player_message):
 @socketio.on("chat_message")
 def handle_chat_message(data):
     player_message = data.get("message", "").strip()
+    if not game_data.get("player"):
+        game_data["player"] = DEFAULT_PLAYER.copy()
+    
     response = generate_dynamic_story(player_message)
     return emit("game_response", {"response": response})
 
-from flask import send_from_directory
-
+# 🌟 Serve the Web UI Correctly
 @app.route("/")
 def index():
     return send_from_directory("static", "index.html")
 
 # 🚀 Run the WebSocket Server
-import os
-
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 10000))  # Use Render's dynamically assigned port
+    port = int(os.environ.get("PORT", 10000))  # Auto-detect Render's assigned port
     socketio.run(app, host="0.0.0.0", port=port)
