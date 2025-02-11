@@ -2,7 +2,8 @@ import random
 import eventlet
 import json
 import os
-from flask import Flask, render_template, request
+import re
+from flask import Flask, render_template
 from flask_socketio import SocketIO, emit
 from flask_cors import CORS
 
@@ -47,32 +48,40 @@ def skill_check(stat, difficulty):
     roll = random.randint(1, 100)
     return (roll + game_data["player"]["stats"][stat]) >= difficulty, roll
 
+# 🌐 Intelligent Input Parsing
+def extract_valid_choice(user_input, valid_choices):
+    """Checks if the user's input contains a valid choice (even within a sentence)."""
+    for choice in valid_choices:
+        if re.search(rf"\b{choice}\b", user_input, re.IGNORECASE):
+            return choice
+    return None
+
 # 📍 Character Creation & Game Setup
 def start_new_game():
-    global game_data  # Ensure we reset game data correctly
     game_data["player"] = DEFAULT_PLAYER.copy()
     save_game_data()
-    return ("🌌 Welcome to **Aetherpunk RPG**.\n\nLet's begin by choosing your **character's name**."
-            "\nType: **My name is [Your Name]**")
-
-def load_existing_game():
-    if "player" in game_data and game_data["player"]["name"]:
-        return (f"Loading save file... Welcome back, **{game_data['player']['name']}**."
-                f"\nYou are currently in **{game_data['player']['location']}**. What do you want to do next?")
-    return "No saved game found. Type **new game** to start fresh."
-
-def save_game():
-    save_game_data()
-    return "💾 Game progress saved."
+    return "🌌 **Welcome to the Aetherpunk RPG.**\n\nLet's start by choosing your **character's name**. Say something like: `I'm [Name]` or `Call me [Name]`."
 
 def set_player_name(name):
     game_data["player"]["name"] = name
     save_game_data()
-    return ("✅ Character name set. Now, choose your **species**:"
-            "\n- **Aetherion** (Hybrid beings, connected to Aetheric energy)"
-            "\n- **Pyronax** (Plasma-based warriors, strong and durable)"
-            "\n- **Volthari** (Electrokinetic cybernetic species)"
-            "\nType your species choice.")
+    return f"✅ Got it. **{name}**, huh? Sounds like trouble. Now, what's your **species**?\n\n- **Aetherion** (Hybrid beings, connected to the Aetheric energy)\n- **Pyronax** (Plasma-based warriors, tough and unyielding)\n- **Volthari** (Electrokinetic cybernetic species, minds like machines)\n\nType it however you want, I'll get the message."
+
+def set_species(species):
+    species = extract_valid_choice(species, ["Aetherion", "Pyronax", "Volthari"])
+    if species:
+        game_data["player"]["species"] = species
+        save_game_data()
+        return f"🔥 **{species}? Bold choice.** Now, pick your **archetype**:\n\n- **Hacker (Hack)** (Master of cyberwarfare)\n- **Mercenary (Merc)** (Combat expert, highly trained)\n- **Smuggler (Smug)** (Underworld expert, always two steps ahead)\n\nJust drop a word, I’ll know what you mean."
+    return "❌ I don't recognize that species. Try again."
+
+def set_archetype(archetype):
+    archetype = extract_valid_choice(archetype, ["Hacker", "Hack", "Mercenary", "Merc", "Smuggler", "Smug"])
+    if archetype:
+        game_data["player"]["archetype"] = archetype.capitalize()
+        save_game_data()
+        return f"🎭 **{archetype}? Nice.** Alright, let's pick a starting planet.\n\n- **Hyperion** (Tough, war-torn, full of gangs and mercs)\n- **Helios** (Tech capital, cyberpunks and AI overlords)\n- **Aethos** (Experimental hybrid zones, law barely exists)\n\nJust name the place, I’ll set the coordinates."
+    return "❌ Didn't catch that. Try again."
 
 # 🚀 Game Interaction Handling
 @socketio.on("chat_message")
@@ -81,23 +90,25 @@ def handle_chat_message(data):
 
     # Game Start Commands
     if "new game" in player_message or "start game" in player_message:
-        emit("game_response", {"response": "🔄 Resetting game... please wait."}, broadcast=True)
-        eventlet.sleep(1)  # Short delay to let the UI update
+        emit("game_response", {"response": "🔄 Resetting game... Hold tight."}, broadcast=True)
+        eventlet.sleep(1)
         return emit("game_response", {"response": start_new_game()}, broadcast=True)
-    
-    elif "load game" in player_message:
-        return emit("game_response", {"response": load_existing_game()})
-    
-    elif "save game" in player_message:
-        return emit("game_response", {"response": save_game()})
 
-    elif player_message.startswith("my name is"):
-        name = player_message.replace("my name is", "").strip().title()
+    elif "help" in player_message:
+        return emit("game_response", {"response": "🤖 **Need help?** Try typing things naturally. Example: `I want to be a Pyronax` or `Send me to Helios.`"})
+
+    elif player_message.startswith(("i'm", "call me", "my name is", "name me")):
+        name = player_message.split()[-1].title()
         return emit("game_response", {"response": set_player_name(name)})
 
-    # Default Response
+    elif extract_valid_choice(player_message, ["Aetherion", "Pyronax", "Volthari"]):
+        return emit("game_response", {"response": set_species(player_message)})
+
+    elif extract_valid_choice(player_message, ["Hacker", "Hack", "Mercenary", "Merc", "Smuggler", "Smug"]):
+        return emit("game_response", {"response": set_archetype(player_message)})
+
     else:
-        return emit("game_response", {"response": "🌀 I didn't quite get that, but let's keep moving forward! What do you want to do next?"})
+        return emit("game_response", {"response": "🌀 Strange words... but hey, this is the Aetherverse. Let's roll with it. What next?"})
 
 # 🛠️ Flask Routes for Frontend
 @app.route("/")
