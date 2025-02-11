@@ -13,9 +13,10 @@ socketio = SocketIO(app, async_mode="eventlet")
 GMAI_PERSONALITY = """
 You are the Aetherpunk Game Master AI (GMAI). 
 You NEVER break character. You control the living, breathing cyberpunk-fantasy world of the Aetherverse.
-You understand a wide range of player inputs, interpreting them naturally and responding appropriately.
-You process combat, hacking, diplomacy, faction wars, and all in-game interactions dynamically.
-You enforce consequences, skill checks, and narrative depth. Adapt to the player's phrasing, ensuring a seamless roleplaying experience.
+You understand and respond to any player input, always ensuring a meaningful and immersive interaction.
+You track the player's journey, faction standings, location, inventory, and decisions.
+You enforce skill checks, combat, hacking, diplomacy, and economic mechanics with real consequences.
+You guide the player through an open-ended adventure where every choice matters.
 """
 
 # 📚 Aetherpunk Lore Database (Extended)
@@ -35,6 +36,18 @@ def skill_check(player_skill_level, difficulty):
     roll = random.randint(1, 100)
     return (roll + player_skill_level) >= difficulty, roll
 
+# 📍 Player Data (Tracking Inventory, Location, and Factions)
+player_data = {
+    "name": "Vaedros Kyron",
+    "location": "Hyperion",
+    "inventory": [],
+    "factions": {
+        "Red Talons": 0,  # Neutral standing
+        "Aetheric Dominion": -50,  # Hostile
+        "Volthari Technocracy": 10  # Slightly Favorable
+    }
+}
+
 # 🔄 Process Flexible Player Input
 def process_player_input(message):
     message_lower = message.lower()
@@ -46,11 +59,11 @@ def process_player_input(message):
 
     # Check for combat-related commands
     if any(word in message_lower for word in ["attack", "fight", "shoot", "strike", "engage"]):
-        return handle_combat_scenario(message_lower)
+        return handle_combat_scenario()
 
     # Check for hacking-related actions
     if any(word in message_lower for word in ["hack", "bypass", "override", "decrypt"]):
-        return handle_hacking_attempt(message_lower)
+        return handle_hacking_attempt()
 
     # Check for movement and exploration
     if any(word in message_lower for word in ["travel", "go to", "move to", "explore"]):
@@ -58,13 +71,13 @@ def process_player_input(message):
 
     # Check for trade, smuggling, or business interactions
     if any(word in message_lower for word in ["buy", "sell", "trade", "smuggle", "negotiate", "black market"]):
-        return handle_trade_action(message_lower)
+        return handle_trade_action()
 
     # Default response when input doesn't match predefined actions
     return "The Aetherverse is vast. Be more specific in your request."
 
 # ⚔️ Handle Combat Interactions
-def handle_combat_scenario(player_message):
+def handle_combat_scenario():
     enemy_name = "Cyber-Warrior Elite"
     player_skill_level = 50
     enemy_difficulty = 65
@@ -76,7 +89,7 @@ def handle_combat_scenario(player_message):
         return f"❌ Your attack misses! {enemy_name} counters aggressively. (Roll: {roll})"
 
 # 🛠️ Handle Hacking Attempts
-def handle_hacking_attempt(player_message):
+def handle_hacking_attempt():
     success, roll = skill_check(70, 60)
     if success:
         return f"✅ You successfully hack into the system (Roll: {roll}). Sensitive data retrieved!"
@@ -88,12 +101,13 @@ def handle_travel_action(player_message):
     locations = ["Hyperion", "Helios", "Aethos"]
     for loc in locations:
         if loc.lower() in player_message:
-            return f"📍 You begin your journey to {loc}. The atmosphere crackles with energy..."
+            player_data["location"] = loc
+            return f"📍 You arrive at {loc}. The environment shifts around you..."
     return "Specify a valid destination."
 
 # 💰 Handle Trade & Smuggling
-def handle_trade_action(player_message):
-    return "You navigate the black market, scanning for potential buyers and sellers. Who are you dealing with?"
+def handle_trade_action():
+    return "You scan the black market, evaluating potential buyers and sellers. Who do you want to negotiate with?"
 
 # 🎭 AI-Driven Game Master Response Generator
 @socketio.on("chat_message")
