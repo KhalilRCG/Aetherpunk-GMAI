@@ -1,3 +1,4 @@
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 from backend.game_state import GameState
 from backend.game_master_ai import GameMasterAI
 from backend.economy import Economy
@@ -8,18 +9,16 @@ from backend.city_builder import CityBuilder
 from backend.heist_generator import HeistGenerator
 from backend.black_market import BlackMarket
 
-
 app = FastAPI()
 game_state = GameState()
 gm_ai = GameMasterAI()
 economy = Economy()
-npc_ai = NPC_AI()
 quest_engine = QuestEngine()
-city_builder = CityBuilder()
 factions = Factions()
+npc_ai = NPC_AI()
+city_builder = CityBuilder()
 heist_generator = HeistGenerator()
 black_market = BlackMarket()
-
 active_connections = {}
 
 @app.websocket("/ws/{player_id}")
