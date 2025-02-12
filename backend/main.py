@@ -1,0 +1,60 @@
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect
+from game_state import GameState
+from game_master_ai import GameMasterAI
+from economy import Economy
+from npc_ai import NPC_AI
+from quest_engine import QuestEngine
+from city_builder import CityBuilder
+from factions import Factions
+from heist_generator import HeistGenerator
+from black_market import BlackMarket
+
+app = FastAPI()
+game_state = GameState()
+gm_ai = GameMasterAI()
+economy = Economy()
+npc_ai = NPC_AI()
+quest_engine = QuestEngine()
+city_builder = CityBuilder()
+factions = Factions()
+heist_generator = HeistGenerator()
+black_market = BlackMarket()
+
+active_connections = {}
+
+@app.websocket("/ws/{player_id}")
+async def websocket_endpoint(websocket: WebSocket, player_id: str):
+    await websocket.accept()
+    active_connections[player_id] = websocket
+    try:
+        while True:
+            data = await websocket.receive_text()
+            response = gm_ai.generate_event(data, game_state.load_state(player_id))
+            await websocket.send_text(response)
+    except WebSocketDisconnect:
+        del active_connections[player_id]
+
+@app.get("/start/{player_id}")
+def start_game(player_id: str):
+    game_state.save_state(player_id, {"location": "Hyperion", "credits": {"AuroCreds": 1000}, "reputation": 0})
+    return {"message": "Game started!", "player_state": game_state.load_state(player_id)}
+
+@app.post("/quest/{player_id}")
+def generate_quest(player_id: str):
+    return {"quest": quest_engine.generate_quest(player_id)}
+
+@app.post("/city/build/{player_id}")
+def build_city(player_id: str):
+    return {"city": city_builder.generate_city(player_id)}
+
+@app.post("/factions/war/{faction1}/{faction2}")
+def start_war(faction1: str, faction2: str):
+    return factions.start_war(faction1, faction2)
+
+@app.post("/heist/generate/{player_id}")
+def generate_heist(player_id: str):
+    return {"heist": heist_generator.generate_heist(player_id)}
+
+@app.post("/black-market/trade/{item}/{amount}")
+def trade_black_market(item: str, amount: int):
+    return {"value": black_market.trade(item, amount)}
