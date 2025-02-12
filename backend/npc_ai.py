@@ -1,13 +1,15 @@
 import openai
 import os
 import json
+from backend.game_state import GameState
 
 openai.api_key = os.getenv("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")
 
 class NPC_AI:
     """AI-powered NPC personalities that evolve based on player interactions."""
-    
+
     def __init__(self):
+        self.game_state = GameState()
         self.npc_memory = {}
 
     def interact(self, npc_name, player_id, interaction):
