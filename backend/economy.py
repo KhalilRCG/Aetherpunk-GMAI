@@ -1,12 +1,14 @@
 import random
 import json
 import redis
+from backend.game_state import GameState
 
 class Economy:
     """Manages AI-driven economy, market fluctuations, and black-market trade."""
-    
+
     def __init__(self):
         self.redis = redis.Redis(host='localhost', port=6379, decode_responses=True)
+        self.game_state = GameState()
 
         self.base_exchange_rates = {
             "AuroCreds": 1.0,
