@@ -1,9 +1,9 @@
 import openai
 import json
 import redis
-from game_state import GameState
+from backend.game_state import GameState
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("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")
 
 class CityBuilder:
     """AI-Driven Procedural City Generation System"""
@@ -11,6 +11,7 @@ class CityBuilder:
     def __init__(self):
         self.redis = redis.Redis(host='localhost', port=6379, decode_responses=True)
         self.game_state = GameState()
+
         self.system_prompt = "You are a cyberpunk city-building AI, generating detailed city maps with districts, economic zones, and faction-controlled areas."
 
     def generate_city(self, player_id):
