@@ -3,7 +3,7 @@ import os
 from city_builder import CityBuilder
 from game_state import GameState
 
-openai.api_key = os.getenv("OPENAI_API_KEY")
+openai.api_key = os.getenv("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")
 
 class GameMasterAI:
     """Handles AI-generated responses for missions, lore, and city-building."""
