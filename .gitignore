@@ -1,0 +1,10 @@
+
+---
+
+## **4. `.gitignore` – Ignore Unnecessary Files**
+```gitignore
+__pycache__/
+*.pyc
+.env
+.vscode/
+node_modules/
