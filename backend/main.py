@@ -1,13 +1,13 @@
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect
-from game_state import GameState
-from game_master_ai import GameMasterAI
-from economy import Economy
-from npc_ai import NPC_AI
-from quest_engine import QuestEngine
-from city_builder import CityBuilder
-from factions import Factions
-from heist_generator import HeistGenerator
-from black_market import BlackMarket
+from backend.game_state import GameState
+from backend.game_master_ai import GameMasterAI
+from backend.economy import Economy
+from backend.quest_engine import QuestEngine
+from backend.factions import Factions
+from backend.npc_ai import NPC_AI
+from backend.city_builder import CityBuilder
+from backend.heist_generator import HeistGenerator
+from backend.black_market import BlackMarket
+
 
 app = FastAPI()
 game_state = GameState()
