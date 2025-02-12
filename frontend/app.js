@@ -1,5 +1,5 @@
 // Establish WebSocket connection for multiplayer chat
-let ws = new WebSocket("ws://localhost:8000/ws/player123");
+let ws = new WebSocket("https://aetherpunk-gmai.onrender.com");
 
 ws.onmessage = function(event) {
     document.getElementById("chatOutput").innerText = event.data;
