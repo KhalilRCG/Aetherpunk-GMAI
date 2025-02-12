@@ -1,6 +1,6 @@
 import random
 import redis
-from game_state import GameState
+from backend.game_state import GameState
 
 class BlackMarket:
     """Handles underground economy, smuggling, and laundering mechanics."""
