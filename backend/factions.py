@@ -1,9 +1,11 @@
 import random
+from backend.game_state import GameState
 
 class Factions:
     """Manages faction reputation, conflicts, and influence mechanics."""
 
     def __init__(self):
+        self.game_state = GameState()
         self.factions = {
             "Red Talons": {"influence": 50, "hostility": 20, "war_status": "Neutral"},
             "Obsidian Circuit": {"influence": 40, "hostility": 30, "war_status": "At Peace"},
