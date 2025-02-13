@@ -1,4 +1,10 @@
 import random
+import json
+import asyncio
+from websockets import broadcast
+
+# Global storage for WebSocket connections
+active_connections = set()
 
 class Quest:
     """Represents a quest dynamically generated based on player interactions and world conditions."""
@@ -26,73 +32,48 @@ class Quest:
         self.status = "Active"  # Quest status: Active, Completed, Failed
         self.stage = 1  # Multi-stage quest progression
     
-    def progress_quest(self):
-        """Advances the quest to the next stage."""
+    async def send_update(self, update_message):
+        """Sends real-time updates to connected WebSocket clients."""
+        if active_connections:
+            await broadcast(active_connections, json.dumps({"quest_update": update_message}))
+    
+    async def progress_quest(self):
+        """Advances the quest to the next stage and sends a UI update."""
         self.stage += 1
         if self.stage > len(self.objectives):
             self.status = "Completed"
-            return f"Quest '{self.quest_type}' fully completed! Rewards: {self.rewards}, Reputation Impact: {self.reputation_outcome}, Faction Power Shift: {self.faction_power_shift}"
-        return f"Stage {self.stage}: {self.objectives[self.stage - 1]}"
-
-    def reveal_hidden_objectives(self):
-        """Reveals hidden objectives if conditions are met."""
+            await self.send_update(f"Quest '{self.quest_type}' fully completed! Rewards: {self.rewards}, Reputation Impact: {self.reputation_outcome}, Faction Power Shift: {self.faction_power_shift}")
+            return
+        await self.send_update(f"Stage {self.stage}: {self.objectives[self.stage - 1]}")
+    
+    async def reveal_hidden_objectives(self):
+        """Reveals hidden objectives if conditions are met and sends a UI update."""
         if self.hidden_objectives:
             revealed = self.hidden_objectives.pop(0)
-            return f"New Hidden Objective Unlocked: {revealed}"
-        return "No hidden objectives remaining."
+            await self.send_update(f"New Hidden Objective Unlocked: {revealed}")
+        else:
+            await self.send_update("No hidden objectives remaining.")
     
-    def update_status(self, outcome):
-        """Updates the quest status based on player actions."""
+    async def update_status(self, outcome):
+        """Updates the quest status and sends a UI update."""
         if outcome == "success":
             self.status = "Completed"
-            return f"Quest '{self.quest_type}' completed. Rewards: {self.rewards}, Reputation Impact: {self.reputation_outcome}, Faction Power Shift: {self.faction_power_shift}"
+            await self.send_update(f"Quest '{self.quest_type}' completed. Rewards: {self.rewards}, Reputation Impact: {self.reputation_outcome}, Faction Power Shift: {self.faction_power_shift}")
         elif outcome == "failure":
             if self.emergency_extraction:
-                return f"Mission failed, but an emergency extraction saved you: {self.emergency_extraction}"
+                await self.send_update(f"Mission failed, but an emergency extraction saved you: {self.emergency_extraction}")
             self.status = "Failed"
-            return f"Quest '{self.quest_type}' failed. Consequences: {self.consequences}, Hidden Bounty Escalation: {self.hidden_bounty_escalation}"
+            await self.send_update(f"Quest '{self.quest_type}' failed. Consequences: {self.consequences}, Hidden Bounty Escalation: {self.hidden_bounty_escalation}")
         elif outcome == "betrayal":
             if self.faction_double_cross:
-                return f"You were double-crossed by {self.faction}! {self.faction_double_cross}"
+                await self.send_update(f"You were double-crossed by {self.faction}! {self.faction_double_cross}")
             self.status = "Betrayed"
-            return f"You betrayed {self.giver}. Faction standing with {self.faction} severely damaged."
-        return "No changes to quest status."
+            await self.send_update(f"You betrayed {self.giver}. Faction standing with {self.faction} severely damaged.")
 
-
-def generate_quest(player_reputation, faction_affiliation):
-    """Dynamically generates a quest based on the player's reputation and faction."""
-    quest_givers = ["Kara Vex", "Darius Coil", "Echo Nyx", "Victor Graves", "Sable Wren"]
-    quest_types = ["Assassination", "Heist", "Espionage", "Trade Deal", "Escort", "Sabotage"]
-    difficulties = ["Easy", "Medium", "Hard", "Deadly"]
-    
-    ai_difficulty_adjustments = ["Enemy reinforcements arrive", "Security measures are increased", "A surprise twist alters the mission objectives"]
-    undercover_infiltrations = ["Player must assume a false identity", "Mission requires deep cover tactics", "A mole inside the target faction aids the player"]
-    faction_power_shifts = ["Faction influence expands due to mission success", "A rival faction loses territory", "Political control changes hands"]
-    
-    giver = random.choice(quest_givers)
-    quest_type = random.choice(quest_types)
-    difficulty = random.choice(difficulties)
-    faction = faction_affiliation if faction_affiliation else random.choice(["Corporate", "Syndicate", "Resistance", "Freelancer"])
-    
-    return Quest(
-        giver=giver,
-        faction=faction,
-        quest_type=quest_type,
-        difficulty=difficulty,
-        objectives=random.sample(["Primary objective secured", "Secondary targets neutralized", "Intel recovered"], k=3),
-        hidden_objectives=random.sample(["Find an unknown informant", "Destroy extra evidence", "Secure encrypted files"], k=2),
-        rewards=random.choice(["Rare cyberware", "Faction influence boost", "High-value credits", "Advanced weapon mods"]),
-        consequences=random.choice(["Faction hostility increased", "Bounty placed on your head", "Rival NPCs begin hunting you"]),
-        npc_involvement=random.choice(["Local gang leader", "Corporate spy", "Elite assassin", "Undercover agent", "Bounty hunter"]),
-        faction_rival_interference=random.choice(["A rival faction ambushes the mission", "Enemy spies attempt to sabotage the operation"]),
-        branching_paths=random.choice(["Betray your employer for better rewards", "Align with an unexpected ally", "Change the mission goal mid-way"]),
-        black_market_deals=random.choice(["A secret fixer offers alternative rewards", "Black-market traders provide hidden mission perks"]),
-        emergency_extraction=random.choice(["A covert pilot awaits in a hidden getaway vehicle", "A hidden underground tunnel offers an escape route"]),
-        faction_double_cross=random.choice(["Your faction sells you out to the highest bidder", "The employer leaks your location to the authorities"]),
-        faction_negotiation=random.choice(["Factions agree to a temporary ceasefire", "A faction changes its demand mid-mission", "A rival faction attempts to recruit you"]),
-        hidden_bounty_escalation=random.choice(["Your actions secretly raise your bounty", "A high-profile target places a contract on your head"]),
-        reputation_outcome=random.choice(["Boosts reputation with allies", "Severely damages standing with rivals", "Draws the attention of powerful NPCs"]),
-        ai_difficulty_adjustment=random.choice(ai_difficulty_adjustments),
-        undercover_infiltration=random.choice(undercover_infiltrations),
-        faction_power_shift=random.choice(faction_power_shifts)
-    )
+async def connect_websocket(websocket):
+    """Handles WebSocket connections for real-time quest updates."""
+    active_connections.add(websocket)
+    try:
+        await websocket.wait_closed()
+    finally:
+        active_connections.remove(websocket)
