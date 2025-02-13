@@ -1,7 +1,12 @@
 import os
+from dotenv import load_dotenv
+
+# Load environment variables from .env file (if available)
+load_dotenv()
 
 class Config:
     """Configuration settings for Aetherpunk GMAI."""
+    
     DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///aetherpunk.db")
     LOG_FILE = os.getenv("LOG_FILE", "aetherpunk.log")
     WEBSOCKET_PORT = int(os.getenv("WEBSOCKET_PORT", 8000))
