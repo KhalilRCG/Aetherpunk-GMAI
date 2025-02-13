@@ -1,7 +1,7 @@
-fastapi
-uvicorn
-websockets
-sqlite3
-logging
-pytest
-
+fastapi==0.92.0
+uvicorn==0.20.0
+websockets==10.4
+sqlite3==3.35.0
+logging==0.5.1.2
+pytest==7.2.0
+pydantic==1.10.4 
