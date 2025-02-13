@@ -1,0 +1,7 @@
+fastapi
+uvicorn
+websockets
+sqlite3
+logging
+pytest
+
