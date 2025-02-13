@@ -4,6 +4,7 @@ const socket = new WebSocket("ws://localhost:8000/ws/quests");
 
 socket.onopen = () => {
     console.log("Connected to quest WebSocket.");
+    showNotification("Connected", "You are now receiving quest updates.");
 };
 
 socket.onmessage = (event) => {
@@ -21,6 +22,7 @@ socket.onmessage = (event) => {
 
 socket.onclose = () => {
     console.log("Disconnected from quest WebSocket.");
+    showNotification("Disconnected", "WebSocket connection lost.", true);
 };
 
 function displayQuestUpdate(updateMessage) {
@@ -31,16 +33,15 @@ function displayQuestUpdate(updateMessage) {
     questLog.prepend(logEntry);
 }
 
-function showNotification(title, message) {
-    if (Notification.permission === "granted") {
-        new Notification(title, { body: message });
-    } else if (Notification.permission !== "denied") {
-        Notification.requestPermission().then(permission => {
-            if (permission === "granted") {
-                new Notification(title, { body: message });
-            }
-        });
+function showNotification(title, message, error = false) {
+    const notification = document.createElement("div");
+    notification.classList.add("notification");
+    if (error) {
+        notification.classList.add("error");
     }
+    notification.innerText = `${title}: ${message}`;
+    document.body.appendChild(notification);
+    setTimeout(() => notification.remove(), 5000);
 }
 
 function updateQuestProgress(progressData) {
@@ -65,63 +66,7 @@ function updateQuestProgress(progressData) {
     document.getElementById("progress-inner").style.width = progressData + "%";
 }
 
-function displayQuestChoices(choices, npcReactions, npcPersuasion) {
-    const choiceContainer = document.createElement("div");
-    choiceContainer.id = "quest-choices";
-    choiceContainer.innerHTML = "<h3>Make a Choice:</h3>";
-    
-    choices.forEach(choice => {
-        let choiceButton = document.createElement("button");
-        choiceButton.innerText = choice.text;
-        choiceButton.onclick = () => sendPlayerChoice(choice.value);
-        choiceButton.classList.add("major-choice"); // Highlight major choices visually
-        choiceContainer.appendChild(choiceButton);
-        
-        if (npcReactions && npcReactions[choice.value]) {
-            let npcReaction = document.createElement("p");
-            npcReaction.innerText = `NPC Reaction: ${npcReactions[choice.value]}`;
-            npcReaction.classList.add("npc-reaction");
-            choiceContainer.appendChild(npcReaction);
-        }
-        
-        if (npcPersuasion && npcPersuasion[choice.value]) {
-            let npcPersuade = document.createElement("p");
-            npcPersuade.innerText = `NPC Persuasion: ${npcPersuasion[choice.value]}`;
-            npcPersuade.classList.add("npc-persuasion");
-            choiceContainer.appendChild(npcPersuade);
-        }
-    });
-    
-    document.body.appendChild(choiceContainer);
-}
-
-function sendPlayerChoice(choiceValue) {
-    socket.send(JSON.stringify({ action: "player_choice", choice: choiceValue }));
-}
-
 function updateMapLocation(locationData) {
     if (!mapContainer) return;
     mapContainer.innerHTML = `<p>Current Quest Location: ${locationData}</p>`;
 }
-
-// CSS for visual indicators (to be added in a stylesheet or inside a <style> tag)
-// .major-choice {
-//     background-color: #ffcc00;
-//     border: 2px solid #ff9900;
-//     font-weight: bold;
-//     transition: transform 0.2s ease-in-out;
-// }
-// .major-choice:hover {
-//     transform: scale(1.1);
-// }
-// .npc-reaction {
-//     font-style: italic;
-//     color: #ccc;
-//     margin-left: 10px;
-// }
-// .npc-persuasion {
-//     font-style: italic;
-//     color: #ff6666;
-//     font-weight: bold;
-//     margin-left: 10px;
-// }
